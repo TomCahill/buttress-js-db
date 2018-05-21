@@ -1,0 +1,237 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import", href="../iron-ajax/iron-ajax.html">
+
+<link rel="import", href="./buttress-db-data-service.html">
+
+<!-- TEMP HACK - Needs moving to component -->
+<script src="./buttress-db-schema.js"></script>
+
+<dom-module id="buttress-db">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <iron-ajax
+      id="schema",
+      url="//[[endpoint]]/api/v1/app/schema",
+      params="{{rqSchemaParams}}",
+      handleAs="json",
+      last-response="{{dbSchema}}">
+    </iron-ajax>
+
+    <template id="dataServices" is="dom-repeat" items="{{__collections}}">
+      <buttress-db-data-service
+        id="[[item.name]]"
+        token="[[token]]",
+        endpoint="[[endpoint]]",
+        route="[[item.name]]",
+        loaded="{{item.loaded}}",
+        status="{{item.status}}",
+        data="{{item.data}}",
+        metadata="{{item.metadata}}",
+        priority="[[item.priority]]">
+      </buttress-db-data-service>
+    </template>
+  </template>
+  <script>
+    /**
+     * `buttress-db`
+     * #
+     *
+     * @customElement
+     * @polymer
+     */
+    class ButtressDb extends Polymer.Element {
+      static get is() { return 'buttress-db'; }
+      static get properties() {
+        return {
+          endpoint: String,
+
+          loaded: {
+            type: Boolean,
+            notify: true
+          },
+
+          token: {
+            type: String
+          },
+
+          __maxConcurrentRequests: {
+            type: Number,
+            value: 4
+          },
+          rqSchemaParams: {
+            type: Object
+          },
+
+          dbSchema: {
+            type: Array,
+            value: function() {
+              return [];
+            }
+          },
+          db: {
+            type: Object,
+            value: function() {
+              // post: {
+              //   status: 'uninitialised',
+              //   data: [],
+              //   metadata: {}
+              // }
+              return {};
+            },
+            notify: true
+          },
+          __collections: {
+            type: Object,
+            value: function() {
+              return [];
+            }
+          },
+          __services: {
+            type: Array,
+            value: function() {
+              return [];
+            }
+          },
+          __numRequests: {
+            type: Number,
+            value: 0
+          }
+        };
+      }
+
+      static get observers() {
+        return [
+          '__tokenChanged(token)',
+          '__dbSchemaChanged(dbSchema.*)'
+        ];
+      }
+      
+      ready() {
+        super.ready();
+        this.addEventListener('data-service-list', ev => this.__onDataLoaded(ev));
+      }
+      
+      attached() {
+        new Fingerprint2().get(result => {
+          let nibbles = result.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
+          let id = 0;
+          nibbles.forEach((n,idx) => id |= n << idx);
+          this.__machineId = id;
+          this.__processId = Math.floor(Math.random() * 100000) % 0xFFFF;
+          this.__inc = Math.floor(Math.random() * 65535) % 0xFFFF;
+        });
+      }
+
+      __tokenChanged() {
+        const token = this.get('token');
+        if (!token){
+          return;
+        }
+        
+        // Fetch app schema using provided token
+        this.set('rqSchemaParams', {
+          urq: Date.now(),
+          token: token
+        });
+        this.$.schema.generateRequest();
+      }
+
+      __dbSchemaChanged() {
+        const schema = this.get('dbSchema');
+        if (!schema || schema.length < 1) return;
+
+        AppDb.Schema.schema = schema;
+
+        // Generate db data map
+        schema.forEach(s => {
+          const idx = this.push('__collections', {
+            name: s.collection,
+            status: 'uninitialised',
+            priority: 1,
+            data: [],
+            metadata: {}
+          }) - 1;
+          this.set(['db', s.collection], this.get(['__collections', idx]));
+          this.linkPaths(['db', s.collection], ['__collections', idx]);
+        });
+
+        // Fire data service requests
+        this.__services = Polymer.dom(this.root).querySelectorAll('buttress-db-data-service:not([loaded])');
+        this.__services.sort((a,b) => a.priority - b.priority);
+        for (let x=0; x<this.__maxConcurrentRequests; x++)
+          this.__onDataLoaded();
+      }
+
+      __onDataLoaded(ev) {
+        if (!ev) {
+          this.__services.shift().triggerGet();
+          this.__numRequests++;
+          return;
+        }
+        
+        if (--this.__numRequests === 0) {
+          // this.__debug('All loaded');
+          this.set('loaded', true);
+        }
+        if (!this.__services.length) {
+          return;
+        }
+
+        this.__services.shift().triggerGet();
+        this.__numRequests++;
+      }
+
+      genObjectId(time) {
+        if ('number' != typeof time) {
+          time = ~~(Date.now()/1000);
+        }
+
+        const memory = new ArrayBuffer(12);
+        const buffer   = new Uint8Array(memory);
+
+        this.__inc++;
+
+        this.__silly(time);
+
+        // Encode time
+        buffer[3] = time & 0xff;
+        buffer[2] = (time >> 8) & 0xff;
+        buffer[1] = (time >> 16) & 0xff;
+        buffer[0] = (time >> 24) & 0xff;
+        // Encode machine
+        buffer[6] = this.__machineId & 0xff;
+        buffer[5] = (this.__machineId >> 8) & 0xff;
+        buffer[4] = (this.__machineId >> 16) & 0xff;
+        // Encode pid
+        buffer[8] = this.__processId & 0xff;
+        buffer[7] = (this.__processId >> 8) & 0xff;
+        // Encode index
+        buffer[11] = this.__inc & 0xff;
+        buffer[10] = (this.__inc >> 8) & 0xff;
+        buffer[9] = (this.__inc >> 16) & 0xff;
+
+        this.__silly(this.__inc);
+        this.__silly(buffer);
+        let objectStr = '';
+
+        for (let x=0; x<12; x++) {
+          objectStr += buffer[x].toString(16).padStart(2, '0');
+        }
+
+        this.__silly(objectStr);
+
+        let hexRex = new RegExp("^[0-9a-fA-F]{24}$");
+        this.__assert(hexRex.test(objectStr));
+
+        return objectStr;
+      }
+    }
+
+    window.customElements.define(ButtressDb.is, ButtressDb);
+  </script>
+</dom-module>
