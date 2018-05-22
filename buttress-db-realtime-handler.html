@@ -32,6 +32,11 @@
           token: String,
           appId: String,
 
+          lastSequence: {
+            type: Number,
+            value: null
+          },
+
           db: {
             type: Object,
             notify: true
@@ -40,27 +45,40 @@
       }
 
       __handleRxEvent(ev) {
-        console.log('silly', ev.detail);
-        let type = ev.detail.type;
+        const lastSequence = this.get('lastSequence');
+        const type = ev.detail.type;
+
+        console.log('silly', '__handleRxEvent', ev.detail);
+
         if (type !== 'db-activity') {
           return;
         }
-        let payload = ev.detail.payload;
-        // let user = this.get('db.user.data').find(u => u.id === payload.user);
+        
+        const sequence = ev.detail.payload.sequence;
+        const data = ev.detail.payload.data;
 
-        // if (payload.visibility != 'private') {
-        //   this.push('db.activity.data', {
-        //     timestamp: payload.timestamp,
-        //     title: payload.title,
-        //     description: payload.description,
-        //     user: payload.user,
-        //     path: payload.path
-        //   });
-        // }
+        if (lastSequence !== null) {
+          if (lastSequence === sequence) {
+            console.log('warn', 'Payload duplicate discarding', sequence, lastSequence);
+            return;
+          }
+          if (lastSequence + 1 !== sequence) {
+            // this.fire('create-action-toast', {
+            //   label: 'Reload',
+            //   text: 'New version available, Please reload to update.',
+            //   onAction: () => location.reload(0),
+            //   duration: 0
+            // });
+            console.log('warn', 'Payload mismatch', sequence, lastSequence);
+            return;
+          }
+        }
 
-        // if (authUser.id !== payload.user) {
-        this.__parsePayload(payload);
+        // if (authUser.id !== data.user) {
+        this.__parsePayload(data);
         // }
+        
+        this.set('lastSequence', sequence);
       }
 
       __parsePayload(payload) {
@@ -83,13 +101,17 @@
         console.log('silly', pathSpec);
         console.log('silly', params);
 
+        if (path.length > 0 && !this.get(['db', path[0], 'data'])) {
+          console.log('silly', `__parsePayload: No data service for ${path[0]}`);
+          return; // We don't have a data service for this data
+        }
+
         switch (payload.verb) {
           case 'post': {
             if (payload.path.includes('metadata') && params.id && params.key) {
               this.__handleMetadataPost(path, params, payload);
             } else {
               this.__handlePostCommon(path, params, payload);
-              this.__handlePost(path, params, payload);
             }
 
           } break;
@@ -132,34 +154,18 @@
         if (path.length !== 1) {
           return;
         }
-        this.push(['db', path[0], 'data'], payload.response);
-      }
 
-      __handlePost(path, params, payload) {
-        console.log('debug', `__handlePost`, path);
-        switch (path[0]) {
-          case 'contactList': {
-            this.__handleContactListPost(path, params, payload);
-            break;
+        let responses = payload.response;
+        if (!Array.isArray(responses)) {
+          responses = [responses];
+        }
+
+        responses.forEach((response) => {
+          if (!response.__readonly__) {
+            response.__readonly__ = true;
           }
-        }
-      }
-
-      __handleContactListPost(path, params, payload) {
-        if (path.length !== 1) {
-          return;
-        }
-
-        console.log('debug', `__handleContactListPost: ${payload.response.campaignId}`);
-        let campaigns = this.get('db.campaign.data');
-        let campaign = campaigns.findIndex(c => c.id === payload.response.campaignId);
-        if (campaign === -1) {
-          console.log('warn', `Failed to find campaign with id: ${payload.response.campaignId}`);
-          return;
-        }
-        console.log('debug', `Adding campaign (${campaign}) contact list: ${payload.response.id}`);
-        this.set(`db.campaign.data.${campaign}.__readOnlyChange__`, true);
-        // this.push(`db.campaign.data.${campaign}.contactListIds`, payload.response.id);
+          this.push(['db', path[0], 'data'], response);
+        })
       }
 
       __getUpdatePath(path, params, payload, response) {
@@ -183,7 +189,7 @@
       __handlePut(path, params, payload, response) {
         let updatePath = this.__getUpdatePath(path, params, payload, response);
         if (updatePath === false) {
-          console.log('warn', `__handlePut Invalid Update: `, path);
+          console.log('silly', `__handlePut Invalid Update: `, path);
           return;
         }
         console.log('silly', `__handlePut`, path, updatePath);
