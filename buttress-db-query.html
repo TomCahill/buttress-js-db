@@ -98,13 +98,13 @@
         }
       }
       __query() {
-        this.__debug('__query', this.query);
+        console.log('debug', '__query', this.query);
         if (!this.query) {
           this.__silly('__query', 'no query');
           return;
         }
         if (!this.doc || !this.doc.loaded) {
-          this.__debug('__query', 'no doc');
+          console.log('debug', '__query', 'no doc');
           return;
         }
         if (this.get('paused') === true) {
@@ -124,7 +124,7 @@
 
           this.__silly(this.page, this.limit, this.numPages);
           data = data.splice((this.page-1) * this.limit, this.limit);
-          this.__debug(data);
+          console.log('debug', data);
         }
 
         this.set('findAll', data);
@@ -230,7 +230,7 @@
         }
 
         let results = data.filter(fns[operator](operand));
-        this.__debug('__executeQuery', field, operator, operand, data.length, results.length);
+        console.log('debug', '__executeQuery', field, operator, operand, data.length, results.length);
 
         return results;
       }

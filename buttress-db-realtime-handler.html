@@ -1,4 +1,5 @@
 <link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="./buttress-db-socket-io.html">
 
 <dom-module id="buttress-db-realtime-handler">
   <template>
@@ -7,6 +8,13 @@
         display: none;
       }
     </style>
+
+    <buttress-db-socket-io
+      endpoint="[[endpoint]]",
+      app-id="[[appId]]",
+      token="[[token]]",
+      on-rx-event="__handleRxEvent"
+    ></buttress-db-socket-io>
   </template>
   <script>
     /**
@@ -20,15 +28,19 @@
       static get is() { return 'buttress-db-realtime-handler'; }
       static get properties() {
         return {
+          endpoint: String,
+          token: String,
+          appId: String,
+
           db: {
             type: Object,
             notify: true
-          }
+          },
         };
       }
 
-      __handleRxEvent(ev, authUser) {
-        this.__silly(ev.detail);
+      __handleRxEvent(ev) {
+        console.log('silly', ev.detail);
         let type = ev.detail.type;
         if (type !== 'db-activity') {
           return;
@@ -46,9 +58,9 @@
         //   });
         // }
 
-        if (authUser.id !== payload.user) {
-          this.__parsePayload(payload);
-        }
+        // if (authUser.id !== payload.user) {
+        this.__parsePayload(payload);
+        // }
       }
 
       __parsePayload(payload) {
@@ -67,9 +79,9 @@
             params[pathParamMatches[1]] = path[idx];
           }
         }
-        this.__silly(path);
-        this.__silly(pathSpec);
-        this.__silly(params);
+        console.log('silly', path);
+        console.log('silly', pathSpec);
+        console.log('silly', params);
 
         switch (payload.verb) {
           case 'post': {
@@ -101,15 +113,15 @@
       }
 
       __handleMetadataPost(path, params, payload) {
-        this.__silly('__handleMetadataPost', path[0], params, payload.response.value);
+        console.log('silly', '__handleMetadataPost', path[0], params, payload.response.value);
         let metadata = this.get(['db', path[0], 'metadata', params.id]);
         let metadataRoot = this.get(['db', path[0], 'metadata']);
 
         if (!metadata) {
-          this.__warn('ignoring metadata update, not already loaded');
+          console.log('warn', 'ignoring metadata update, not already loaded');
           return;
         }
-        this.__silly('metadata', metadata);
+        console.log('silly', 'metadata', metadata);
 
         metadataRoot.__readOnlyChange__ = true;
         this.set(['db', path[0], 'metadata', params.id, params.key], payload.response.value);
@@ -124,7 +136,7 @@
       }
 
       __handlePost(path, params, payload) {
-        this.__debug(`__handlePost`, path);
+        console.log('debug', `__handlePost`, path);
         switch (path[0]) {
           case 'contactList': {
             this.__handleContactListPost(path, params, payload);
@@ -138,14 +150,14 @@
           return;
         }
 
-        this.__debug(`__handleContactListPost: ${payload.response.campaignId}`);
+        console.log('debug', `__handleContactListPost: ${payload.response.campaignId}`);
         let campaigns = this.get('db.campaign.data');
         let campaign = campaigns.findIndex(c => c.id === payload.response.campaignId);
         if (campaign === -1) {
-          this.__warn(`Failed to find campaign with id: ${payload.response.campaignId}`);
+          console.log('warn', `Failed to find campaign with id: ${payload.response.campaignId}`);
           return;
         }
-        this.__debug(`Adding campaign (${campaign}) contact list: ${payload.response.id}`);
+        console.log('debug', `Adding campaign (${campaign}) contact list: ${payload.response.id}`);
         this.set(`db.campaign.data.${campaign}.__readOnlyChange__`, true);
         // this.push(`db.campaign.data.${campaign}.contactListIds`, payload.response.id);
       }
@@ -171,25 +183,25 @@
       __handlePut(path, params, payload, response) {
         let updatePath = this.__getUpdatePath(path, params, payload, response);
         if (updatePath === false) {
-          this.__warn(`__handlePut Invalid Update: `, path);
+          console.log('warn', `__handlePut Invalid Update: `, path);
           return;
         }
-        this.__silly(`__handlePut`, path, updatePath);
+        console.log('silly', `__handlePut`, path, updatePath);
 
         this.db[path[0]].data[updatePath[3]].__readOnlyChange__ = true;
         switch (response.type) {
           case 'scalar': {
-            this.__silly('updating', updatePath, response.value);
+            console.log('silly', 'updating', updatePath, response.value);
             this.set(updatePath, response.value);
             break;
           }
           case 'vector-add': {
-            this.__silly('inserting', updatePath, response.value);
+            console.log('silly', 'inserting', updatePath, response.value);
             this.push(updatePath, response.value);
             break;
           }
           case 'vector-rm': {
-            this.__silly('removing', updatePath, response.value);
+            console.log('silly', 'removing', updatePath, response.value);
             this.splice(updatePath, response.value.index, response.value.numRemoved);
             break;
           }
