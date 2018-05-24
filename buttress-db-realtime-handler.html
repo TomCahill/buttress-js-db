@@ -31,6 +31,7 @@
           endpoint: String,
           token: String,
           appId: String,
+          userId: String,
 
           lastSequence: {
             type: Number,
@@ -45,6 +46,7 @@
       }
 
       __handleRxEvent(ev) {
+        const userId = this.get('userId');
         const lastSequence = this.get('lastSequence');
         const type = ev.detail.type;
 
@@ -73,10 +75,11 @@
             return;
           }
         }
-
-        // if (authUser.id !== data.user) {
-        this.__parsePayload(data);
-        // }
+        
+        console.log('USERID', userId, data.user);
+        if (userId !== data.user) {
+          this.__parsePayload(data);
+        }
         
         this.set('lastSequence', sequence);
       }
