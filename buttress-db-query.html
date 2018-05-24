@@ -86,21 +86,21 @@
 
       __docStatus() {
         if (!this.doc.loaded) {
-          this.__silly('__docStatus', this.doc.status, this.doc);
+          console.log('silly', '__docStatus', this.doc.status, this.doc);
           return;
         }
 
-        this.__silly('__docStatus', 'doc.status', this.doc.status);
+        console.log('silly', '__docStatus', 'doc.status', this.doc.status);
 
         if (this.query) {
-          this.__silly('__docStatus', 'query', this.query);
+          console.log('silly', '__docStatus', 'query', this.query);
           this.set('query.__loaded', true);
         }
       }
       __query() {
         console.log('debug', '__query', this.query);
         if (!this.query) {
-          this.__silly('__query', 'no query');
+          console.log('silly', '__query', 'no query');
           return;
         }
         if (!this.doc || !this.doc.loaded) {
@@ -108,21 +108,21 @@
           return;
         }
         if (this.get('paused') === true) {
-          this.__silly('__query', 'Paused');
+          console.log('silly', '__query', 'Paused');
           return;
         }
 
         let data = this.doc.data;
-        this.__silly(data);
+        console.log('silly', data);
         data = this.__processQuery(this.query, data);
-        this.__silly(data);
+        console.log('silly', data);
 
         if (this.limit > 0) {
           this.set('numPages', Math.ceil(data.length / this.limit));
           this.set('numResults', data.length);
           this.set('findAllUnpaged', data.concat([]));
 
-          this.__silly(this.page, this.limit, this.numPages);
+          console.log('silly', this.page, this.limit, this.numPages);
           data = data.splice((this.page-1) * this.limit, this.limit);
           console.log('debug', data);
         }
@@ -134,7 +134,7 @@
           this.unlinkPaths(`findAll.#${idx}`);
           if (dataIndex !== -1) {
             this.linkPaths(`findAll.#${idx}`, `doc.data.#${dataIndex}`);
-            this.__silly(`Query: findAll.#${idx} linked to doc.data.#${dataIndex}`);
+            console.log('silly', `Query: findAll.#${idx} linked to doc.data.#${dataIndex}`);
           }
         });
 
@@ -144,10 +144,10 @@
         this.unlinkPaths('findOne');
         if (dataIndex !== -1) {
           this.linkPaths('findOne', `doc.data.#${dataIndex}`);
-          this.__silly(`Query: findOne linked to doc.data.#${dataIndex}`);
+          console.log('silly', `Query: findOne linked to doc.data.#${dataIndex}`);
         }
 
-        this.__silly(this.findOne);
+        console.log('silly', this.findOne);
       }
 
       __processQuery(query, data) {
@@ -193,7 +193,7 @@
           let split = path.split('.');
           return split.reduce((o, key) => {
             if (!o) return [];
-            this.__silly(typeof o[key], o instanceof Array); 
+            console.log('silly', typeof o[key], o instanceof Array); 
             if (o instanceof Array && typeof o[key] === 'undefined') {
               return o.reduce((res, p) => {
                 if (!p[key]) return res;
