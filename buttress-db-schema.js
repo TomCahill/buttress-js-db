@@ -1,11 +1,11 @@
 const AppDb = {
   Schema: {
     schema: [],
-    noNotes: [
-      'tasks',
-      'documents',
-      'services'
-    ],
+    // noNotes: [
+    //   'tasks',
+    //   'documents',
+    //   'services'
+    // ],
     getSchema: function(collection) {
       const schema = AppDb.Schema.schema.find(r => r.collection === collection);
       if (!schema) {
@@ -289,9 +289,9 @@ const AppDb = {
     
         res[root] = value;
       }
-      if (!AppDb.Schema.noNotes.includes(collection)) {
-        res.notes = [];
-      }
+      // if (!AppDb.Schema.noNotes.includes(collection)) {
+      //   res.notes = [];
+      // }
       // console.log(res);
       return res;
     },
