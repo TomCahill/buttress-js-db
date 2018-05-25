@@ -7,6 +7,7 @@
 <!-- TEMP HACK - Needs moving to component -->
 <script src="./buttress-db-schema.js"></script>
 <script src="../sugar/dist/sugar.js"></script>
+<script src="../fingerprintjs2/dist/fingerprint2.min.js"></script>
 
 <dom-module id="buttress-db">
   <template>
@@ -126,7 +127,7 @@
         this.addEventListener('data-service-ready', ev => this.__dataServiceReady(ev));
       }
       
-      attached() {
+      connectedCallback() {
         new Fingerprint2().get(result => {
           let nibbles = result.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
           let id = 0;
@@ -135,6 +136,8 @@
           this.__processId = Math.floor(Math.random() * 100000) % 0xFFFF;
           this.__inc = Math.floor(Math.random() * 65535) % 0xFFFF;
         });
+
+        this.set('db.Factory', AppDb.Factory);
       }
 
       __dataServiceReady(ev){
