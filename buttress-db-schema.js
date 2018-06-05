@@ -1,18 +1,27 @@
 const AppDb = {
   Schema: {
     schema: [],
-    // noNotes: [
-    //   'tasks',
-    //   'documents',
-    //   'services'
-    // ],
+
     getSchema: function(collection) {
+      return AppDb.Schema.schema.find(r => r.collection === collection);
+    },
+
+    getSubSchema: function(collection, path) {
+      const subSchemaName = path.split('.').pop();
       const schema = AppDb.Schema.schema.find(r => r.collection === collection);
       if (!schema) {
         return false;
       }
-    
-      return schema;
+
+      const property = Polymer.Base.get(path, schema.properties);
+      if (!property || !property.__schema) {
+        return false;
+      }
+
+      return {
+        collection: subSchemaName,
+        properties: property.__schema
+      }
     },
     
     getFlattened: function(schema) {
@@ -50,6 +59,49 @@ const AppDb = {
       return flattened;
     },
 
+    inflate: function(schema) {
+      const __inflateObject = (parent, path, value) => {
+        if (path.length > 1) {
+          let parentKey = path.shift();
+          if (!parent[parentKey]) {
+            parent[parentKey] = {};
+          }
+          __inflateObject(parent[parentKey], path, value);
+          return;
+        }
+      
+        parent[path.shift()] = value;
+        return;
+      };
+     
+      const flattenedSchema = AppDb.Schema.getFlattened(schema);
+    
+      const res = {};
+      const objects = {};
+      for (let property in flattenedSchema) {
+        if (!flattenedSchema.hasOwnProperty(property)) continue;
+        const config = flattenedSchema[property];
+        let propVal = {
+          path: property,
+          value: AppDb.Factory.getPropDefault(config)
+        };
+    
+        const path = propVal.path.split('.');
+        const root = path.shift();
+        let value = propVal.value;
+        if (path.length > 0) {
+          if (!objects[root]) {
+            objects[root] = {};
+          }
+          __inflateObject(objects[root], path, value);
+          value = objects[root];
+        }
+    
+        res[root] = value;
+      }
+      return res;
+    },
+
     clean: function(collection, path, value) {
       const schema = this.getSchema(collection);
 
@@ -83,8 +135,6 @@ const AppDb = {
     validate: function(collection, object) {
       const flattenedSchema = AppDb.Schema.getFlattened(AppDb.Schema.getSchema(collection));
       const flattenedObject = this.__getFlattened(object);
-      console.log(flattenedSchema);
-      console.log(flattenedObject);
 
       return this.__validate(flattenedSchema, flattenedObject, '');
     },
@@ -246,54 +296,19 @@ const AppDb = {
   Factory: {
     create: function(collection) {
       let schema = AppDb.Schema.getSchema(collection);
-      if (!collection) {
+      if (!schema) {
+        throw new Error(`Failed to find schema for ${collection}`);
+      }
+
+      return AppDb.Schema.inflate(schema, false);
+    },
+    createFromPath: function(collection, path) {
+      const schema = AppDb.Schema.getSubSchema(collection, path);
+      if (!schema) {
         return false;
       }
 
-      const __inflateObject = (parent, path, value) => {
-        if (path.length > 1) {
-          let parentKey = path.shift();
-          if (!parent[parentKey]) {
-            parent[parentKey] = {};
-          }
-          __inflateObject(parent[parentKey], path, value);
-          return;
-        }
-      
-        parent[path.shift()] = value;
-        return;
-      };
-     
-      const flattenedSchema = AppDb.Schema.getFlattened(schema);
-    
-      const res = {};
-      const objects = {};
-      for (let property in flattenedSchema) {
-        if (!flattenedSchema.hasOwnProperty(property)) continue;
-        const config = flattenedSchema[property];
-        let propVal = {
-          path: property,
-          value: AppDb.Factory.getPropDefault(config)
-        };
-    
-        const path = propVal.path.split('.');
-        const root = path.shift();
-        let value = propVal.value;
-        if (path.length > 0) {
-          if (!objects[root]) {
-            objects[root] = {};
-          }
-          __inflateObject(objects[root], path, value);
-          value = objects[root];
-        }
-    
-        res[root] = value;
-      }
-      // if (!AppDb.Schema.noNotes.includes(collection)) {
-      //   res.notes = [];
-      // }
-      // console.log(res);
-      return res;
+      return AppDb.Schema.inflate(schema, false);
     },
     getPropDefault: function(config) {
       let res;
