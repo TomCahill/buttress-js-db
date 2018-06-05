@@ -1,21 +1,16 @@
-# \<buttress-db\>
+## &lt;buttress-db&gt;
 
-#
+A set of elements enabling realtime data handling from ButtressJS
 
-## Install the Polymer-CLI
+Sample use:
 
-First, make sure you have the [Polymer CLI](https://www.npmjs.com/package/polymer-cli) installed. Then run `polymer serve` to serve your element locally.
-
-## Viewing Your Element
-
+```html
+<buttress-db
+  endpoint="endpoint.example.com",
+  app-id="[[publicAppId]]",
+  user-id="[[AuthedUserId]]",
+  token="[[AuthedUserToken]]",
+  loaded="{{dbLoaded}}",
+  db="{{db}}">
+</buttress-db>
 ```
-$ polymer serve
-```
-
-## Running Tests
-
-```
-$ polymer test
-```
-
-Your application is already set up to be tested via [web-component-tester](https://github.com/Polymer/web-component-tester). Run `polymer test` to run your application's test suite locally.

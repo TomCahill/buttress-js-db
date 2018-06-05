@@ -1,7 +1,20 @@
 {
   "name": "buttress-db",
-  "description": "#",
+  "description": "A set of elements enabling realtime data handling from ButtressJS",
   "main": "buttress-db.html",
+  "license": "MIT",
+  "keywords": [
+    "buttress-js",
+    "buttress",
+    "realtime"
+  ],
+  "authors": [
+    "Lighten"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wearelighten/buttress-js-db.git"
+  },
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.0",
     "iron-ajax": "PolymerElements/iron-ajax#^2.1.3",
