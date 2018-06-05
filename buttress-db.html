@@ -107,11 +107,18 @@
             },
             notify: true
           },
+          coreCollections: {
+            type: Array,
+            value: function() {
+              return [];
+            },
+          },
           __collections: {
             type: Object,
             value: function() {
               return [];
-            }
+            },
+            notify: true
           },
           __services: {
             type: Array,
@@ -129,7 +136,7 @@
       static get observers() {
         return [
           '__tokenChanged(token)',
-          '__dbSchemaChanged(dbSchema.*)'
+          '__dbSchemaChanged(coreCollections, dbSchema.*)'
         ];
       }
       
@@ -180,9 +187,22 @@
 
       __dbSchemaChanged() {
         const schema = this.get('dbSchema');
+        const coreCollections = this.get('coreCollections');
         if (!schema || schema.length < 1) return;
 
         AppDb.Schema.schema = schema;
+
+        coreCollections.forEach(collection => {
+          const idx = this.push('__collections', {
+            name: collection,
+            status: 'uninitialised',
+            priority: 1,
+            data: [],
+            metadata: {}
+          }) - 1;
+          this.set(['db', collection], this.get(['__collections', idx]));
+          this.linkPaths(['db', collection], `__collections.${idx}`);
+        });
 
         // Generate db data map
         schema.forEach(s => {
@@ -194,7 +214,7 @@
             metadata: {}
           }) - 1;
           this.set(['db', s.collection], this.get(['__collections', idx]));
-          this.linkPaths(['db', s.collection], ['__collections', idx]);
+          this.linkPaths(['db', s.collection], `__collections.${idx}`);
         });
       }
 
