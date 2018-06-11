@@ -194,20 +194,7 @@
 
       __executeQuery(data, field, operator, operand) {
         const __parsePath = (obj, path) => {
-          let split = path.split('.');
-          return split.reduce((o, key) => {
-            if (!o) return [];
-            if (this.logging) console.log(this.logLabel, 'silly', typeof o[key], o instanceof Array); 
-            if (o instanceof Array && typeof o[key] === 'undefined') {
-              return o.reduce((res, p) => {
-                if (!p[key]) return res;
-                res.push(p[key]);
-                return res;
-              }, []);
-            }
-
-            return o[key] === null || Array.isArray(o[key]) === false ? [o[key]] : o[key];
-          }, obj);
+          return [Polymer.Base.get(path, obj)];
         };
 
         let fns = {
