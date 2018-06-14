@@ -68,11 +68,17 @@
           query: {
             type: Object,
           },
-          fields: {
-            type: Array,
+
+          sortPath: {
+            type: String
           },
-          sort: {
-            type: Array
+          sortType: {
+            type: String,
+            value: 'string'
+          },
+          sortOrder: {
+            type: String,
+            value: 'DESC'
           },
 
           paused: {
@@ -118,8 +124,17 @@
 
         let data = this.doc.data;
         if (this.logging) console.log(this.logLabel, 'silly', data);
-        data = this.__processQuery(this.query, data);
+        try {
+          data = this.__processQuery(this.query, data);
+        } catch (err) {
+          console.error('Query was:', this.query);
+          throw err;
+        }
         if (this.logging) console.log(this.logLabel, 'silly', data);
+
+        if (this.get('sortPath')) {
+          data = data.sort((a, b) => this.__sort(a, b));
+        }
 
         if (this.limit > 0) {
           this.set('numPages', Math.ceil(data.length / this.limit));
@@ -192,27 +207,88 @@
         return outData;
       }
 
+      __sort(a, b){
+        const sortPath = this.get('sortPath');
+        const sortType = this.get('sortType');
+        const sortOrder = this.get('sortOrder');
+
+        const pathValueA = this.__parsePath(a, sortPath);
+        const pathValueB = this.__parsePath(b, sortPath);
+
+        let valueA = pathValueA[0];
+        let valueB = pathValueB[0];
+
+        if (sortType === 'string') {
+          valueA = (valueA) ? valueA.toLowerCase(): '';
+          valueB = (valueB) ? valueB.toLowerCase(): '';
+        }
+        if (sortType === 'date') {
+          return (sortOrder === 'ASC') ? new Date(valueA) - new Date(valueB) : new Date(valueB) - new Date(valueA);
+        }
+
+        if (sortOrder === 'ASC') {
+          return valueA.localeCompare(valueB);
+        }
+
+        return valueB.localeCompare(valueA);
+      }
+
+      __parsePath(obj, path) {
+        return [Polymer.Base.get(path, obj)];
+      }
+
       __executeQuery(data, field, operator, operand) {
-        const __parsePath = (obj, path) => {
-          return [Polymer.Base.get(path, obj)];
-        };
 
         let fns = {
-          $not: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val !== rhs) !== -1,
-          $eq: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val === rhs) !== -1,
-          $gt: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val > rhs) !== -1,
-          $lt: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val < rhs) !== -1,
-          $gte: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val >= rhs) !== -1,
-          $lte: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val <= rhs) !== -1,
-          $rex: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => (new RegExp(rhs)).test(val)) !== -1,
-          $rexi: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => (new RegExp(rhs, 'i')).test(val)) !== -1,
+          $not: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val !== rhs) !== -1,
+          $eq: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val === rhs) !== -1,
+          $gt: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val > rhs) !== -1,
+          $lt: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val < rhs) !== -1,
+          $gte: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val >= rhs) !== -1,
+          $lte: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val <= rhs) !== -1,
+          $rex: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => (new RegExp(rhs)).test(val)) !== -1,
+          $rexi: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => (new RegExp(rhs, 'i')).test(val)) !== -1,
           $in: (rhs) => (lhs) => rhs.indexOf(lhs[field]) !== -1,
           $nin: (rhs) => (lhs) => rhs.indexOf(lhs[field]) === -1,
-          $exists: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => val === undefined) === -1 === rhs,
+          $exists: (rhs) => (lhs) => this.__parsePath(lhs, field).findIndex(val => val === undefined) === -1 === rhs,
           $inProp: (rhs) => (lhs) => lhs[field].indexOf(rhs) !== -1,
-          $elMatch: (rhs) => (lhs) => this.__processQuery(rhs, __parsePath(lhs, field)).length > 0,
-          $gteDate: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => Sugar.Date.isAfter(Sugar.Date.create(val), rhs) || val === rhs) !== -1,
-          $lteDate: (rhs) => (lhs) => __parsePath(lhs, field).findIndex(val => Sugar.Date.isBefore(Sugar.Date.create(val), rhs) || val === rhs) !== -1,
+          $elMatch: (rhs) => (lhs) => this.__processQuery(rhs, this.__parsePath(lhs, field)).length > 0,
+          $gtDate: (rhs) => {
+            if (rhs === null) return false;
+            const rhsDate = Sugar.Date.create(rhs);
+
+            return (lhs) => this.__parsePath(lhs, field).findIndex(val => {
+              if (val === null) return false; // Dont compare against null value
+              return Sugar.Date.isBefore(rhsDate, val);
+            }) !== -1;
+          },
+          $ltDate: (rhs) => {
+            if (rhs === null) return false;
+            const rhsDate = Sugar.Date.create(rhs);
+
+            return (lhs) => this.__parsePath(lhs, field).findIndex(val => {
+              if (val === null) return false; // Dont compare against null value
+              return Sugar.Date.isAfter(rhsDate, val);
+            }) !== -1;
+          },
+          $gteDate: (rhs) => {
+            if (rhs === null) return false;
+            const rhsDate = Sugar.Date.create(rhs);
+
+            return (lhs) => this.__parsePath(lhs, field).findIndex(val => {
+              if (val === null) return false; // Dont compare against null value
+              return Sugar.Date.isBefore(rhsDate, val) || Sugar.Date.is(rhsDate, val);
+            }) !== -1;
+          },
+          $lteDate: (rhs) => {
+            if (rhs === null) return false;
+            const rhsDate = Sugar.Date.create(rhs);
+
+            return (lhs) => this.__parsePath(lhs, field).findIndex(val => {
+              if (val === null) return false; // Dont compare against null value
+              return Sugar.Date.isAfter(rhsDate, val) || Sugar.Date.is(rhsDate, val);
+            }) !== -1;
+          }
         };
 
         if (!fns[operator]) {
