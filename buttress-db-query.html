@@ -134,16 +134,18 @@
           if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
           if (!this.query) {
             if (this.logging) console.log(this.logLabel, 'silly', '__query', 'no query');
-            resolve(false);
+            return resolve(false);
           }
           if (!this.doc || !this.doc.loaded) {
             if (this.logging) console.log(this.logLabel, 'debug', '__query', 'no doc');
-            resolve(false);
+            return resolve(false);
           }
           if (this.get('paused') === true) {
             if (this.logging) console.log(this.logLabel, 'silly', '__query', 'Paused');
-            resolve(false);
+            return resolve(false);
           }
+
+          if (this.logging) console.log(this.logLabel, 'silly', this.query);
 
           let data = this.doc.data;
           if (this.logging) console.log(this.logLabel, 'silly', data);
@@ -191,7 +193,7 @@
 
           if (this.logging) console.log(this.logLabel, 'silly', this.findOne);
 
-          resolve(true);
+          return resolve(true);
         });
       }
 
