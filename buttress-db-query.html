@@ -81,6 +81,8 @@
             value: 'DESC'
           },
 
+          __debouncer: Object,
+
           paused: {
             type: Boolean,
             value: false
@@ -89,7 +91,7 @@
       }
       static get observers() {
         return [
-          '__query(query.*, page, limit, paused)',
+          '__queryDebouncer(query.*, page, limit, paused)',
           '__docStatus(doc, doc.loaded)'
         ];
       }
@@ -106,6 +108,13 @@
           if (this.logging) console.log(this.logLabel, 'silly', '__docStatus', 'query', this.query);
           this.set('query.__loaded', true);
         }
+      }
+      __queryDebouncer() {
+        this.set('_debouncer', Polymer.Debouncer.debounce(
+          this.get('_debouncer'),
+          Polymer.Async.timeOut.after(100),
+          () => this.__query()
+        ));
       }
       __query() {
         if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
