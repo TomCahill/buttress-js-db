@@ -68,6 +68,12 @@
           query: {
             type: Object,
           },
+          
+          loading: {
+            type: Boolean,
+            notify: true,
+            value: false
+          },
 
           sortPath: {
             type: String
@@ -81,6 +87,8 @@
             value: 'DESC'
           },
 
+          __debouncer: Object,
+
           paused: {
             type: Boolean,
             value: false
@@ -89,7 +97,7 @@
       }
       static get observers() {
         return [
-          '__query(query.*, page, limit, paused)',
+          '__queryDebouncer(query.*, page, limit, paused)',
           '__docStatus(doc, doc.loaded)'
         ];
       }
@@ -107,66 +115,86 @@
           this.set('query.__loaded', true);
         }
       }
-      __query() {
-        if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
-        if (!this.query) {
-          if (this.logging) console.log(this.logLabel, 'silly', '__query', 'no query');
-          return;
-        }
-        if (!this.doc || !this.doc.loaded) {
-          if (this.logging) console.log(this.logLabel, 'debug', '__query', 'no doc');
-          return;
-        }
-        if (this.get('paused') === true) {
-          if (this.logging) console.log(this.logLabel, 'silly', '__query', 'Paused');
-          return;
-        }
+      __queryDebouncer() {
+        this.set('loading', true);
 
-        let data = this.doc.data;
-        if (this.logging) console.log(this.logLabel, 'silly', data);
-        try {
-          data = this.__processQuery(this.query, data);
-        } catch (err) {
-          console.error('Query was:', this.query);
-          throw err;
-        }
-        if (this.logging) console.log(this.logLabel, 'silly', data);
-
-        if (this.get('sortPath')) {
-          data = data.sort((a, b) => this.__sort(a, b));
-        }
-
-        if (this.limit > 0) {
-          this.set('numPages', Math.ceil(data.length / this.limit));
-          this.set('numResults', data.length);
-          this.set('findAllUnpaged', data.concat([]));
-
-          if (this.logging) console.log(this.logLabel, 'silly', this.page, this.limit, this.numPages);
-          data = data.splice((this.page-1) * this.limit, this.limit);
-          if (this.logging) console.log(this.logLabel, 'debug', data);
-        }
-
-        this.set('findAll', data);
-        data.forEach((d, idx) => {
-          let dataIndex = this.doc.data.indexOf(d);
-
-          this.unlinkPaths(`findAll.#${idx}`);
-          if (dataIndex !== -1) {
-            this.linkPaths(`findAll.#${idx}`, `doc.data.#${dataIndex}`);
-            if (this.logging) console.log(this.logLabel, 'silly', `Query: findAll.#${idx} linked to doc.data.#${dataIndex}`);
+        this.set('_debouncer', Polymer.Debouncer.debounce(
+          this.get('_debouncer'),
+          Polymer.Async.timeOut.after(100),
+          () => {
+            this.__query()
+            .then(() => {
+              this.set('loading', false);
+            });
           }
+        ));
+      }
+      __query() {
+        return new Promise(resolve => {
+          if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
+          if (!this.query) {
+            if (this.logging) console.log(this.logLabel, 'silly', '__query', 'no query');
+            return resolve(false);
+          }
+          if (!this.doc || !this.doc.loaded) {
+            if (this.logging) console.log(this.logLabel, 'debug', '__query', 'no doc');
+            return resolve(false);
+          }
+          if (this.get('paused') === true) {
+            if (this.logging) console.log(this.logLabel, 'silly', '__query', 'Paused');
+            return resolve(false);
+          }
+
+          if (this.logging) console.log(this.logLabel, 'silly', this.query);
+
+          let data = this.doc.data;
+          if (this.logging) console.log(this.logLabel, 'silly', data);
+          try {
+            data = this.__processQuery(this.query, data);
+          } catch (err) {
+            console.error('Query was:', this.query);
+            throw err;
+          }
+          if (this.logging) console.log(this.logLabel, 'silly', data);
+
+          if (this.get('sortPath')) {
+            data = data.sort((a, b) => this.__sort(a, b));
+          }
+
+          if (this.limit > 0) {
+            this.set('numPages', Math.ceil(data.length / this.limit));
+            this.set('numResults', data.length);
+            this.set('findAllUnpaged', data.concat([]));
+
+            if (this.logging) console.log(this.logLabel, 'silly', this.page, this.limit, this.numPages);
+            data = data.splice((this.page-1) * this.limit, this.limit);
+            if (this.logging) console.log(this.logLabel, 'debug', data);
+          }
+
+          this.set('findAll', data);
+          data.forEach((d, idx) => {
+            let dataIndex = this.doc.data.indexOf(d);
+
+            this.unlinkPaths(`findAll.#${idx}`);
+            if (dataIndex !== -1) {
+              this.linkPaths(`findAll.#${idx}`, `doc.data.#${dataIndex}`);
+              if (this.logging) console.log(this.logLabel, 'silly', `Query: findAll.#${idx} linked to doc.data.#${dataIndex}`);
+            }
+          });
+
+          let dataIndex = data.length > 0 ? this.doc.data.indexOf(data[0]): -1;
+          this.set('findOne', data.length > 0 ? data[0] : null);
+
+          this.unlinkPaths('findOne');
+          if (dataIndex !== -1) {
+            this.linkPaths('findOne', `doc.data.#${dataIndex}`);
+            if (this.logging) console.log(this.logLabel, 'silly', `Query: findOne linked to doc.data.#${dataIndex}`);
+          }
+
+          if (this.logging) console.log(this.logLabel, 'silly', this.findOne);
+
+          return resolve(true);
         });
-
-        let dataIndex = data.length > 0 ? this.doc.data.indexOf(data[0]): -1;
-        this.set('findOne', data.length > 0 ? data[0] : null);
-
-        this.unlinkPaths('findOne');
-        if (dataIndex !== -1) {
-          this.linkPaths('findOne', `doc.data.#${dataIndex}`);
-          if (this.logging) console.log(this.logLabel, 'silly', `Query: findOne linked to doc.data.#${dataIndex}`);
-        }
-
-        if (this.logging) console.log(this.logLabel, 'silly', this.findOne);
       }
 
       __processQuery(query, data) {
