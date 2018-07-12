@@ -662,10 +662,10 @@
       }
 
       __computeVectorBaseUrl(endpoint, route) {
-        return `//${endpoint}/api/v1/${route}`
+        return `${endpoint}/api/v1/${route}`
       }
       __computeScalarBaseUrl(endpoint) {
-        return `//${endpoint}/api/v1/${this.route}/${this.rqEntityId}`
+        return `${endpoint}/api/v1/${this.route}/${this.rqEntityId}`
       }
     }
     window.customElements.define(ButtressDbDataService.is, ButtressDbDataService);
