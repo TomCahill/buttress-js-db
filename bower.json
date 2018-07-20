@@ -1,7 +1,7 @@
 {
   "name": "buttress-js-db",
   "description": "A set of elements enabling realtime data handling from ButtressJS",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "main": "buttress-db.html",
   "license": "MIT",
   "keywords": [

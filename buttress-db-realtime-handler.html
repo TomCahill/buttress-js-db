@@ -85,7 +85,7 @@
       }
 
       __parsePayload(payload) {
-        if (payload.response) {
+        if (payload.response && typeof payload.response === 'object') {
           payload.response.__readonly__ = true;
         }
         
