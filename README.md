@@ -14,3 +14,7 @@ Sample use:
   db="{{db}}">
 </buttress-db>
 ```
+
+## TODO
+* Update to use lit-element
+* Need to write tests

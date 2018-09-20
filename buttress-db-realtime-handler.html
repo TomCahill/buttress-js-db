@@ -33,6 +33,11 @@
           appId: String,
           userId: String,
 
+          logging: {
+            type: Boolean,
+            value: false
+          },
+
           lastSequence: {
             type: Number,
             value: null
@@ -50,7 +55,7 @@
         const lastSequence = this.get('lastSequence');
         const type = ev.detail.type;
 
-        console.log('silly', '__handleRxEvent', ev.detail);
+        if (this.get('logging')) console.log('silly', '__handleRxEvent', ev.detail);
 
         if (type !== 'db-activity') {
           return;
@@ -61,7 +66,7 @@
 
         if (lastSequence !== null) {
           if (lastSequence === sequence) {
-            console.log('warn', 'Payload duplicate discarding', sequence, lastSequence);
+            if (this.get('logging')) console.log('warn', 'Payload duplicate discarding', sequence, lastSequence);
             return;
           }
           if (lastSequence + 1 !== sequence) {
@@ -71,12 +76,12 @@
             //   onAction: () => location.reload(0),
             //   duration: 0
             // });
-            console.log('warn', 'Payload mismatch', sequence, lastSequence);
+            if (this.get('logging')) console.log('warn', 'Payload mismatch', sequence, lastSequence);
             return;
           }
         }
         
-        console.log('USERID', userId, data.user);
+        if (this.get('logging')) console.log('USERID', userId, data.user);
         if (userId !== data.user) {
           this.__parsePayload(data);
         }
@@ -100,12 +105,12 @@
             params[pathParamMatches[1]] = path[idx];
           }
         }
-        console.log('silly', path);
-        console.log('silly', pathSpec);
-        console.log('silly', params);
+        if (this.get('logging')) console.log('silly', path);
+        if (this.get('logging')) console.log('silly', pathSpec);
+        if (this.get('logging')) console.log('silly', params);
 
         if (path.length > 0 && !this.get(['db', path[0], 'data'])) {
-          console.log('silly', `__parsePayload: No data service for ${path[0]}`);
+          if (this.get('logging')) console.log('silly', `__parsePayload: No data service for ${path[0]}`);
           return; // We don't have a data service for this data
         }
 
@@ -138,15 +143,15 @@
       }
 
       __handleMetadataPost(path, params, payload) {
-        console.log('silly', '__handleMetadataPost', path[0], params, payload.response.value);
+        if (this.get('logging')) console.log('silly', '__handleMetadataPost', path[0], params, payload.response.value);
         let metadata = this.get(['db', path[0], 'metadata', params.id]);
         let metadataRoot = this.get(['db', path[0], 'metadata']);
 
         if (!metadata) {
-          console.log('warn', 'ignoring metadata update, not already loaded');
+          if (this.get('logging')) console.log('warn', 'ignoring metadata update, not already loaded');
           return;
         }
-        console.log('silly', 'metadata', metadata);
+        if (this.get('logging')) console.log('silly', 'metadata', metadata);
 
         metadataRoot.__readOnlyChange__ = true;
         this.set(['db', path[0], 'metadata', params.id, params.key], payload.response.value);
@@ -192,25 +197,25 @@
       __handlePut(path, params, payload, response) {
         let updatePath = this.__getUpdatePath(path, params, payload, response);
         if (updatePath === false) {
-          console.log('silly', `__handlePut Invalid Update: `, path);
+          if (this.get('logging')) console.log('silly', `__handlePut Invalid Update: `, path);
           return;
         }
-        console.log('silly', `__handlePut`, path, updatePath);
+        if (this.get('logging')) console.log('silly', `__handlePut`, path, updatePath);
 
         this.db[path[0]].data[updatePath[3]].__readOnlyChange__ = true;
         switch (response.type) {
           case 'scalar': {
-            console.log('silly', 'updating', updatePath, response.value);
+            if (this.get('logging')) console.log('silly', 'updating', updatePath, response.value);
             this.set(updatePath, response.value);
             break;
           }
           case 'vector-add': {
-            console.log('silly', 'inserting', updatePath, response.value);
+            if (this.get('logging')) console.log('silly', 'inserting', updatePath, response.value);
             this.push(updatePath, response.value);
             break;
           }
           case 'vector-rm': {
-            console.log('silly', 'removing', updatePath, response.value);
+            if (this.get('logging')) console.log('silly', 'removing', updatePath, response.value);
             this.splice(updatePath, response.value.index, response.value.numRemoved);
             break;
           }
