@@ -17,3 +17,4 @@ Sample use:
 
 ## TODO
 * Update to use lit-element
+* Need to write tests
