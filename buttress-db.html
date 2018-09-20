@@ -228,7 +228,6 @@
         }
 
         if (--this.__numRequests === 0) {
-          console.log('debug', 'All loaded');
           this.set('loaded', true);
         }
         if (!services.length) {
