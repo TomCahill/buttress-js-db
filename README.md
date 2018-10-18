@@ -1,6 +1,6 @@
 ## &lt;buttress-db&gt;
 
-### Version: 2.0.7
+### Version: 2.0.8
 
 A set of elements enabling realtime data handling from ButtressJS
 
@@ -19,6 +19,7 @@ Sample use:
 
 ## TODO
 * ~~Publish to npm~~
+* Move away from bower
 * Check compatibility with Polymer 3
 * Update to use lit-element
 * Write TESTS!1!!!
