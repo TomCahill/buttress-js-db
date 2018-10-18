@@ -1,5 +1,7 @@
 ## &lt;buttress-db&gt;
 
+### Version: 2.0.7
+
 A set of elements enabling realtime data handling from ButtressJS
 
 Sample use:
@@ -16,5 +18,7 @@ Sample use:
 ```
 
 ## TODO
+* ~~Publish to npm~~
+* Check compatibility with Polymer 3
 * Update to use lit-element
-* Need to write tests
+* Write TESTS!1!!!
