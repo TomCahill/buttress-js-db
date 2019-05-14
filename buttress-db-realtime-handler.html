@@ -94,8 +94,8 @@
           payload.response.__readonly__ = true;
         }
         
-        let pathSpec = payload.pathSpec.split('/').map(ps => Sugar.String.camelize(ps, false));
-        let path = payload.path.split('/').map(p => Sugar.String.camelize(p, false));
+        let pathSpec = payload.pathSpec.split('/').map(ps => Sugar.String.camelize(ps, false)).filter(s => s && s !== '');
+        let path = payload.path.split('/').map(p => Sugar.String.camelize(p, false)).filter(s => s && s !== '');
         let paramsRegex = /:(([a-z]|[A-Z]|[0-9]|[\-])+)(?:\(.*?\))?$/;
 
         let params = {};
