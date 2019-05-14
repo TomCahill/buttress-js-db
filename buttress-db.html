@@ -45,7 +45,8 @@
       endpoint="[[endpoint]]",
       app-id="[[appId]]",
       user-id="[[userId]]",
-      db="{{db}}"
+      db="{{db}}",
+      logging="[[logging]]"
     ></buttress-db-realtime-handler>
   </template>
   <script>
@@ -64,6 +65,11 @@
           token: String,
           appId: String,
           userId: String,
+
+          logging: {
+            type: Boolean,
+            value: false
+          },
 
           loaded: {
             type: Boolean,
