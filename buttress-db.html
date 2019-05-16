@@ -22,7 +22,8 @@
       url="[[endpoint]]/api/v1/app/schema",
       params="{{rqSchemaParams}}",
       handleAs="json",
-      last-response="{{dbSchema}}">
+      last-response="{{dbSchema}}",
+      on-error="__dbSchemaError">
     </iron-ajax>
 
     <template id="dataServices" is="dom-repeat" items="{{__collections}}">
@@ -74,6 +75,14 @@
           loaded: {
             type: Boolean,
             notify: true
+          },
+          error: {
+            type: Boolean,
+            notify: true
+          },
+          lastError: {
+            type: Object,
+            notify: true,
           },
 
           __maxConcurrentRequests: {
@@ -189,6 +198,11 @@
           token: token
         });
         this.$.schema.generateRequest();
+      }
+
+      __dbSchemaError(ev) {
+        this.set('error', true);
+        this.set('lastError', ev);
       }
 
       __dbSchemaChanged() {
