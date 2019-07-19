@@ -227,14 +227,14 @@
         // Generate db data map
         schema.forEach(s => {
           const idx = this.push('__collections', {
-            name: s.collection,
+            name: s.name,
             status: 'uninitialised',
             priority: 1,
             data: [],
             metadata: {}
           }) - 1;
-          this.set(['db', s.collection], this.get(['__collections', idx]));
-          this.linkPaths(['db', s.collection], `__collections.${idx}`);
+          this.set(['db', s.name], this.get(['__collections', idx]));
+          this.linkPaths(['db', s.name], `__collections.${idx}`);
         });
       }
 
