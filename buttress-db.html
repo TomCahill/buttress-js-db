@@ -76,6 +76,18 @@
             type: Boolean,
             notify: true
           },
+          loading: {
+            type: Object,
+            notify: true,
+            value: function() {
+              return {
+                loaded: false,
+                unpacking: false,
+                current: 0,
+                total: 0
+              }
+            }
+          },
           error: {
             type: Boolean,
             notify: true
@@ -180,6 +192,8 @@
         this.push('__services', ev.detail);
 
         if (collections.length === this.get('__services.length')) {
+          this.set('loading.current', 0);
+          this.set('loading.total', this.get('__collections.length'));
           this.__services.sort((a,b) => a.priority - b.priority);
           for (let x=0; x < this.__maxConcurrentRequests; x++)
             this.__onDataLoaded();
@@ -227,14 +241,14 @@
         // Generate db data map
         schema.forEach(s => {
           const idx = this.push('__collections', {
-            name: s.collection,
+            name: s.name,
             status: 'uninitialised',
             priority: 1,
             data: [],
             metadata: {}
           }) - 1;
-          this.set(['db', s.collection], this.get(['__collections', idx]));
-          this.linkPaths(['db', s.collection], `__collections.${idx}`);
+          this.set(['db', s.name], this.get(['__collections', idx]));
+          this.linkPaths(['db', s.name], `__collections.${idx}`);
         });
       }
 
@@ -249,7 +263,12 @@
 
         if (--this.__numRequests === 0) {
           this.set('loaded', true);
+          this.set('loading.loaded', true);
         }
+
+        this.set('loading.current', this.get('loading.total') - this.get('__services.length') );
+        this.set('loading.percent', (this.get('loading.current') / this.get('loading.total')) * 100);
+
         if (!services.length) {
           return;
         }
