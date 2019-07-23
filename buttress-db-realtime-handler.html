@@ -66,17 +66,23 @@
 
         if (lastSequence !== null) {
           if (lastSequence === sequence) {
-            console.warn('Payload duplicate discarding', sequence, lastSequence);
+            this.dispatchEvent(new CustomEvent('realtime-payload-duplicate', {
+              detail: {
+                payload: ev.detail.payload,
+                lastSequence: lastSequence
+              },
+              bubbles: true
+            }));
             return;
           }
           if (lastSequence + 1 !== sequence) {
-            // this.fire('create-action-toast', {
-            //   label: 'Reload',
-            //   text: 'New version available, Please reload to update.',
-            //   onAction: () => location.reload(0),
-            //   duration: 0
-            // });
-            console.warn('Payload mismatch', sequence, lastSequence);
+            this.dispatchEvent(new CustomEvent('realtime-payload-mismatch', {
+              detail: {
+                payload: ev.detail.payload,
+                lastSequence: lastSequence
+              },
+              bubbles: true
+            }));
             return;
           }
         }
