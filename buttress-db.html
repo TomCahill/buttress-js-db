@@ -227,6 +227,7 @@
         AppDb.Schema.schema = schema;
 
         coreCollections.forEach(collection => {
+          const key = Sugar.String.camelize(collection, false);
           const idx = this.push('__collections', {
             name: collection,
             status: 'uninitialised',
@@ -234,12 +235,13 @@
             data: [],
             metadata: {}
           }) - 1;
-          this.set(['db', collection], this.get(['__collections', idx]));
-          this.linkPaths(['db', collection], `__collections.${idx}`);
+          this.set(['db', key], this.get(['__collections', idx]));
+          this.linkPaths(['db', key], `__collections.${idx}`);
         });
 
         // Generate db data map
         schema.forEach(s => {
+          const key = Sugar.String.camelize(s.name, false);
           const idx = this.push('__collections', {
             name: s.name,
             status: 'uninitialised',
@@ -247,8 +249,8 @@
             data: [],
             metadata: {}
           }) - 1;
-          this.set(['db', s.name], this.get(['__collections', idx]));
-          this.linkPaths(['db', s.name], `__collections.${idx}`);
+          this.set(['db', key], this.get(['__collections', idx]));
+          this.linkPaths(['db', key], `__collections.${idx}`);
         });
       }
 
