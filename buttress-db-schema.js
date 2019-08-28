@@ -6,22 +6,23 @@ const AppDb = {
       return AppDb.Schema.schema.find(r => r.collection === collection);
     },
 
-    getSubSchema: function(collection, path) {
-      const subSchemaName = path.split('.').pop();
-      const schema = AppDb.Schema.schema.find(r => r.collection === collection);
-      if (!schema) {
-        return false;
-      }
+    getSubSchema: function(schema, path) {
+      return path.split('.').reduce((out, path) => {
+        if (!out) return false; // Skip all paths if we hit a false
 
-      const property = Polymer.Base.get(path, schema.properties);
-      if (!property || !property.__schema) {
-        return false;
-      }
+        const property = Polymer.Base.get(path, out.properties);
+        if (!property) {
+          return false;
+        }
+        if (property.type && property.type === 'array' && !property.__schema) {
+          return false;
+        }
 
-      return {
-        collection: subSchemaName,
-        properties: property.__schema
-      }
+        return {
+          collection: path,
+          properties: property.__schema || property
+        };
+      }, schema);
     },
     
     getFlattened: function(schema) {
@@ -302,7 +303,12 @@ const AppDb = {
 
       return AppDb.Schema.inflate(schema, false);
     },
-    createFromPath: function(collection, path) {
+    createFromPath: function(collectionName, path) {
+      const collection = AppDb.Schema.getSchema(collectionName);
+      if (!collection) {
+        return false;
+      }
+
       const schema = AppDb.Schema.getSubSchema(collection, path);
       if (!schema) {
         return false;
