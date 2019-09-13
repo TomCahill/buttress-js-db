@@ -43,6 +43,11 @@
             notify: true,
           },
 
+          logging: {
+            type: Boolean,
+            value: false
+          },
+
           fingerPrint: Object,
 
           priority: {
@@ -128,7 +133,7 @@
         if (!cr || this.readOnly) {
           return;
         }
-        console.log('__dataSplices', cr);
+        if (this.get('logging')) console.log('__dataSplices', cr);
 
         cr.indexSplices.forEach(i => {
           let o = i.object[i.index];
@@ -149,7 +154,7 @@
             if (!r.__readonly__) {
               this.__generateRmRequest(r.id);
             } else {
-              console.log(`Ignoring __readonly__ splice for ${r.id}`);
+              if (this.get('logging')) console.log(`Ignoring __readonly__ splice for ${r.id}`);
               delete r.__readonly__;
             }
           });
@@ -162,7 +167,7 @@
        * @private
        */
       __dataChanges(cr) {
-        // console.log(`Internal Change: ${this.__internalChange}`);
+        // if (this.get('logging')) console.log(`Internal Change: ${this.__internalChange}`);
         if (this.__internalChange__) {
           delete this.__internalChange__;
           return;
@@ -172,7 +177,7 @@
           return;
         }
 
-        console.log('__dataChanges: ', cr);
+        if (this.get('logging')) console.log('__dataChanges: ', cr);
         // Ignore mutations on the whole array
         // if (cr.base.length !== 1) {
         //   return;
@@ -180,7 +185,7 @@
 
         // ignore paths with fields with __ as prefix and suffix
         if (/__(\w+)__/.test(cr.path)) {
-          console.log(`Ignoring internal change: ${cr.path}`);
+          if (this.get('logging')) console.log(`Ignoring internal change: ${cr.path}`);
           return;
         }
 
@@ -188,42 +193,42 @@
         // Is this an array mutation?
         if (/\.splices$/.test(cr.path) === true) {
           if (path.length < 4) {
-            console.log('Ignoring path too short:', path);
+            if (this.get('logging')) console.log('Ignoring path too short:', path);
             return;
           }
 
           let entity = this.get(path.slice(0,2));
           // let index = path[1].replace('#', '');
           // if (!cr.base[index]) {
-          //   console.log(`Ignoring: invalid change index: ${index}`);
+          //   if (this.get('logging')) console.log(`Ignoring: invalid change index: ${index}`);
           //   return;
           // }
           // let entity = cr.base[index];
 
           // Ignore a one-off readonly change (remove the field afterwards)
           if (entity.__readOnlyChange__) {
-            console.log(`Ignoring readonly change: ${cr.path}`);
+            if (this.get('logging')) console.log(`Ignoring readonly change: ${cr.path}`);
             delete entity.__readOnlyChange__;
             return;
           }
 
-          console.log('Child array mutation', cr);
+          if (this.get('logging')) console.log('Child array mutation', cr);
 
-          console.log('Key Splices: ', cr.value.indexSplices.length);
+          if (this.get('logging')) console.log('Key Splices: ', cr.value.indexSplices.length);
 
           cr.value.indexSplices.forEach(i => {
             let o = i.object[i.index];
             if (i.addedCount > 0) {
               path.splice(0,2);
               path.splice(-1,1);
-              // console.log('Update request', entity.id, path.join('.'), cr.value);
+              // if (this.get('logging')) console.log('Update request', entity.id, path.join('.'), cr.value);
               if (typeof o === 'object') {
                 o.id = this.genObjectId();
               }
               this.__generateUpdateRequest(entity.id, path.join('.'), o);
             } else if (i.removed.length > 0){
               if(i.removed.length > 1) {
-                console.log('Index splice removed.length > 1', i.removed);
+                if (this.get('logging')) console.log('Index splice removed.length > 1', i.removed);
               } else {
                 path.splice(0, 2);
                 path.splice(-1, 1);
@@ -239,12 +244,12 @@
             return;
           }
 
-          console.log('Key Splices: ', cr.value.keySplices.length);
+          if (this.get('logging')) console.log('Key Splices: ', cr.value.keySplices.length);
 
           cr.value.keySplices.forEach((k, idx) => {
             k.removed.forEach(() => {
               let itemIndex = cr.value.indexSplices[idx].index;
-              console.log(itemIndex);
+              if (this.get('logging')) console.log(itemIndex);
 
               path.splice(0, 2); // drop the prefix
               path.splice(-1, 1); // drop the .splices
@@ -257,21 +262,21 @@
           });
         } else {
           if (path.length < 3) {
-            // console.log('Ignoring path too short:', path);
+            // if (this.get('logging')) console.log('Ignoring path too short:', path);
             return;
           }
           let entity = this.get(path.slice(0,2));
 
           // let index = path[1].replace('#', '');
           if (!entity) {
-            console.log(`Ignoring: invalid change index: ${path.slice(0,2)}`);
+            if (this.get('logging')) console.log(`Ignoring: invalid change index: ${path.slice(0,2)}`);
             return;
           }
 
           // let entity = cr.base[index];
           // Ignore a one-off readonly change (remove the field afterwards)
           if (entity.__readOnlyChange__) {
-            console.log(`Ignoring readonly change: ${cr.path}`);
+            if (this.get('logging')) console.log(`Ignoring readonly change: ${cr.path}`);
             delete entity.__readOnlyChange__;
             return;
           }
@@ -306,40 +311,40 @@
           // }
 
 
-          // console.log('Update request', entity.id, path.join('.'), cr.value);
+          // if (this.get('logging')) console.log('Update request', entity.id, path.join('.'), cr.value);
           this.__generateUpdateRequest(entity.id, path.join('.'), cr.value);
         }
       }
 
       __metadataChanged(cr) {
         if (this.__internalChange__) {
-          console.log(`Ignoring internal metadata change: ${cr.path}`);
+          if (this.get('logging')) console.log(`Ignoring internal metadata change: ${cr.path}`);
           delete this.__internalChange__;
           return;
         }
 
         if (/\.length$/.test(cr.path) === true
           || this.readOnly) {
-          console.log('Ignoring .length or readOnly change');
+          if (this.get('logging')) console.log('Ignoring .length or readOnly change');
           return;
         }
 
         // ignore paths with fields with __ as prefix and suffix
         let matches = /^metadata.([0-9a-fA-F]+)/.exec(cr.path);
         if (!matches) {
-          console.log(`Ignoring invalid metadata path: ${cr.path}`);
+          if (this.get('logging')) console.log(`Ignoring invalid metadata path: ${cr.path}`);
           return;
         }
         let entityId = matches[1];
-        console.log('__metadataChange', cr);
+        if (this.get('logging')) console.log('__metadataChange', cr);
         if (cr.base.__readOnlyChange__) {
           delete cr.base.__readOnlyChange__;
-          console.log(`Ignoring read only change`);
+          if (this.get('logging')) console.log(`Ignoring read only change`);
           return;
         }
 
         if (cr.value.__populate__) {
-          console.log(`Populating metadata for ${entityId}`);
+          if (this.get('logging')) console.log(`Populating metadata for ${entityId}`);
           delete cr.value.__populate__;
           this.__generateMetadataGetAllRequest(entityId, cr.value);
           return;
@@ -347,7 +352,7 @@
 
         // ignore paths with fields with __ as prefix and suffix
         if (/__(\w+)__/.test(cr.path)) {
-          console.log(`Ignoring internal change: ${cr.path}`);
+          if (this.get('logging')) console.log(`Ignoring internal change: ${cr.path}`);
           return;
         }
 
@@ -366,7 +371,7 @@
               sp.object[sp.index].id = this.genObjectId();
             }
           });
-          console.log(base);
+          if (this.get('logging')) console.log(base);
 
           this.__assert(remotePath.length === 1); // Metadata doesn't support remote paths
           this.__generateMetadataUpdateRequest(entityId, remotePath.join('.'), base);
@@ -428,7 +433,7 @@
         this.__queueRequest(request);
       }
       __generateRmRequest(entityId) {
-        console.log(`remove rq: ${entityId}`);
+        if (this.get('logging')) console.log(`remove rq: ${entityId}`);
 
         this.rqEntityId = entityId;
         let request = {
@@ -443,7 +448,7 @@
         this.__queueRequest(request);
       }
       __generateAddRequest(entity) {
-        console.log(`add rq: ${entity.name}`);
+        if (this.get('logging')) console.log(`add rq: ${entity.name}`);
 
         this.rqEntityId = -1;
         let request = {
@@ -457,7 +462,7 @@
         this.__queueRequest(request);
       }
       __generateUpdateRequest(entityId, path, value) {
-        console.log('update rq:',entityId, path, value);
+        if (this.get('logging')) console.log('update rq:',entityId, path, value);
 
         this.rqEntityId = entityId;
         let request = {
@@ -499,7 +504,7 @@
           token: token
         };
 
-        console.log(rq.body);
+        if (this.get('logging')) console.log(rq.body);
         this.rqUrl = rq.url;
         this.rqMethod = rq.method;
         this.rqContentType = rq.contentType;
@@ -514,7 +519,7 @@
         let rq = this.requestQueue.shift();
 
         if (!rq) {
-          console.log('warn', 'Response on an empty requestQueue!!!');
+          if (this.get('logging')) console.log('warn', 'Response on an empty requestQueue!!!');
           return;
         }
 
@@ -544,7 +549,7 @@
       }
 
       __ajaxListResponse(rq) {
-        console.log('__ajaxListResponse', rq);
+        if (this.get('logging')) console.log('__ajaxListResponse', rq);
         this.__internalChange__ = true;
         this.data = this.liveData = rq.response;
         this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
@@ -577,33 +582,33 @@
       }
 
       __ajaxUpdateResponse(rq) {
-        console.log('__ajaxUpdateResponse', rq);
+        if (this.get('logging')) console.log('__ajaxUpdateResponse', rq);
         const responses = rq.response;
         responses.forEach(r => {
           if (!(r.value instanceof Object) || r.type !== 'vector-add' || !r.value.id) {
-            console.log('update early out', r.value instanceof Object);
+            if (this.get('logging')) console.log('update early out', r.value instanceof Object);
             return;
           }
           let idx = this.get('data').findIndex(e => e.id == rq.entityId); //eslint-disable-line eqeqeq
           if (idx === -1) {
-            console.log('warn', 'Invalid entity id', rq.entityId);
+            if (this.get('logging')) console.log('warn', 'Invalid entity id', rq.entityId);
             return;
           }
           let base = this.get(['data', idx, r.path]);
-          console.log(['data', idx, r.path], base);
+          if (this.get('logging')) console.log(['data', idx, r.path], base);
           if (base instanceof Array) {
             for (let x=0; x<base.length; x++) {
               if (!base[x].id) {
                 if (base[x].name !== undefined && r.value.name === base[x].name) {
-                  console.log('Setting array item id using item name', r.value.id, r.value.name);
+                  if (this.get('logging')) console.log('Setting array item id using item name', r.value.id, r.value.name);
                   this.data[idx].__readOnlyChange__ = true;
-                  console.log(['data', idx, rq.body.path, x, 'id']);
+                  if (this.get('logging')) console.log(['data', idx, rq.body.path, x, 'id']);
                   this.set(['data', idx, rq.body.path, x, 'id'], r.value.id);
 
                   break;
                 } else if (base[x].name === undefined) {
                   this.data[idx].__readOnlyChange__ = true;
-                  console.log(['data', idx, rq.body.path, x, 'id']);
+                  if (this.get('logging')) console.log(['data', idx, rq.body.path, x, 'id']);
                   this.set(['data', idx, rq.body.path, x, 'id'], r.value.id);
 
                   break;
@@ -626,7 +631,7 @@
 
         this.set('fingerPrint.inc', fingerPrint.inc + 1);
 
-        console.log(time);
+        if (this.get('logging')) console.log(time);
 
         // Encode time
         buffer[3] = time & 0xff;
@@ -645,15 +650,15 @@
         buffer[10] = (fingerPrint.inc >> 8) & 0xff;
         buffer[9] = (fingerPrint.inc >> 16) & 0xff;
 
-        console.log('silly', fingerPrint.inc);
-        console.log('silly', buffer);
+        if (this.get('logging')) console.log('silly', fingerPrint.inc);
+        if (this.get('logging')) console.log('silly', buffer);
         let objectStr = '';
 
         for (let x=0; x<12; x++) {
           objectStr += buffer[x].toString(16).padStart(2, '0');
         }
 
-        console.log('silly', objectStr);
+        if (this.get('logging')) console.log('silly', objectStr);
 
         let hexRex = new RegExp("^[0-9a-fA-F]{24}$");
         // this.__assert(hexRex.test(objectStr));

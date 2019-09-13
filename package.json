@@ -1,11 +1,20 @@
 {
   "name": "buttress-js-db",
-  "version": "2.0.6",
   "description": "A set of elements enabling realtime data handling from ButtressJS",
-  "main": "buttress-db.html",
-  "directories": {
-    "test": "test"
-  },
+  "version": "2.0.15",
   "author": "Lighten",
-  "license": "MIT"
+  "contributors": [
+    "Chris Bates-Keegan <chris@wearelighten.co.uk>",
+    "Tom Cahill <tomc@wearelighten.co.uk>"
+  ],
+  "homepage": "https://github.com/wearelighten/buttress-js-db",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wearelighten/buttress-js-db"
+  },
+  "bugs": {
+    "url": "https://github.com/wearelighten/buttress-js-db/issues"
+  },
+  "main": "buttress-db.html"
 }

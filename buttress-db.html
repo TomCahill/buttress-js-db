@@ -22,7 +22,8 @@
       url="[[endpoint]]/api/v1/app/schema",
       params="{{rqSchemaParams}}",
       handleAs="json",
-      last-response="{{dbSchema}}">
+      last-response="{{dbSchema}}",
+      on-error="__dbSchemaError">
     </iron-ajax>
 
     <template id="dataServices" is="dom-repeat" items="{{__collections}}">
@@ -45,7 +46,8 @@
       endpoint="[[endpoint]]",
       app-id="[[appId]]",
       user-id="[[userId]]",
-      db="{{db}}"
+      db="{{db}}",
+      logging="[[logging]]"
     ></buttress-db-realtime-handler>
   </template>
   <script>
@@ -65,9 +67,34 @@
           appId: String,
           userId: String,
 
+          logging: {
+            type: Boolean,
+            value: false
+          },
+
           loaded: {
             type: Boolean,
             notify: true
+          },
+          loading: {
+            type: Object,
+            notify: true,
+            value: function() {
+              return {
+                loaded: false,
+                unpacking: false,
+                current: 0,
+                total: 0
+              }
+            }
+          },
+          error: {
+            type: Boolean,
+            notify: true
+          },
+          lastError: {
+            type: Object,
+            notify: true,
           },
 
           __maxConcurrentRequests: {
@@ -165,6 +192,8 @@
         this.push('__services', ev.detail);
 
         if (collections.length === this.get('__services.length')) {
+          this.set('loading.current', 0);
+          this.set('loading.total', this.get('__collections.length'));
           this.__services.sort((a,b) => a.priority - b.priority);
           for (let x=0; x < this.__maxConcurrentRequests; x++)
             this.__onDataLoaded();
@@ -185,6 +214,11 @@
         this.$.schema.generateRequest();
       }
 
+      __dbSchemaError(ev) {
+        this.set('error', true);
+        this.set('lastError', ev);
+      }
+
       __dbSchemaChanged() {
         const schema = this.get('dbSchema');
         const coreCollections = this.get('coreCollections');
@@ -193,6 +227,7 @@
         AppDb.Schema.schema = schema;
 
         coreCollections.forEach(collection => {
+          const key = Sugar.String.camelize(collection, false);
           const idx = this.push('__collections', {
             name: collection,
             status: 'uninitialised',
@@ -200,21 +235,22 @@
             data: [],
             metadata: {}
           }) - 1;
-          this.set(['db', collection], this.get(['__collections', idx]));
-          this.linkPaths(['db', collection], `__collections.${idx}`);
+          this.set(['db', key], this.get(['__collections', idx]));
+          this.linkPaths(['db', key], `__collections.${idx}`);
         });
 
         // Generate db data map
         schema.forEach(s => {
+          const key = Sugar.String.camelize(s.name, false);
           const idx = this.push('__collections', {
-            name: s.collection,
+            name: s.name,
             status: 'uninitialised',
             priority: 1,
             data: [],
             metadata: {}
           }) - 1;
-          this.set(['db', s.collection], this.get(['__collections', idx]));
-          this.linkPaths(['db', s.collection], `__collections.${idx}`);
+          this.set(['db', key], this.get(['__collections', idx]));
+          this.linkPaths(['db', key], `__collections.${idx}`);
         });
       }
 
@@ -228,9 +264,13 @@
         }
 
         if (--this.__numRequests === 0) {
-          console.log('debug', 'All loaded');
           this.set('loaded', true);
+          this.set('loading.loaded', true);
         }
+
+        this.set('loading.current', this.get('loading.total') - this.get('__services.length') );
+        this.set('loading.percent', (this.get('loading.current') / this.get('loading.total')) * 100);
+
         if (!services.length) {
           return;
         }
