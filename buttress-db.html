@@ -290,19 +290,10 @@
             version: 1,
             collections: collections
           })
+          .then(() => this.__workerLoadCollections(collections))
           .then(() => {
-            collections.forEach(collection => {
-              this.__workerTask({
-                task: 'readAll',
-                collection: collection
-              })
-              .then(data => {
-                // Add data to collection
-                this.set(['db', collection, 'data'], data.result);
-                this.set(['db', collection, 'loaded'], true);
-                this.set('loading.loaded', true);
-              })
-            });
+            this.set('loaded', true);
+            this.set('loading.loaded', true);
           });
         }
       }
@@ -317,9 +308,19 @@
         }
 
         if (--this.__numRequests === 0) {
-          this.set('loaded', true);
-          this.set('loading.loaded', true);
-          console.log(this.get('__collections'));
+          // this.set('loaded', true);
+          // this.set('loading.loaded', true);
+          // Test Write some data
+          // this.get('__collections').forEach((collection) => {
+          //   this.__workerTask({
+          //     task: 'bulkWrite',
+          //     collection: collection.name,
+          //     items: collection.data
+          //   })
+          //   .then(() => {
+          //     console.log(`Written ${collection.data.length} collection`);
+          //   });
+          // });
         }
 
         this.set('loading.current', this.get('loading.total') - this.get('__services.length') );
@@ -331,6 +332,21 @@
 
         services.shift().triggerGet();
         this.__numRequests++;
+      }
+
+      __workerLoadCollections(collections) {
+        const load = (collection) => {
+          return this.__workerTask({
+            task: 'readAll',
+            collection: collection
+          })
+          .then(data => {
+            this.set(['db', collection, 'data'], data.result);
+            this.set(['db', collection, 'loaded'], true);
+          });
+        }
+
+        return Promise.all(collections.map(load));
       }
 
       __workerTask(payload) {
