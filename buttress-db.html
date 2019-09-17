@@ -30,6 +30,7 @@
       <buttress-db-data-service
         id="[[item.name]]"
         token="[[token]]",
+        api-path="[[apiPath]]",
         endpoint="[[endpoint]]",
         route="[[item.name]]",
         loaded="{{item.loaded}}",
@@ -37,7 +38,8 @@
         data="{{item.data}}",
         finger-print="{{__fingerPrint}}",
         metadata="{{item.metadata}}",
-        priority="[[item.priority]]">
+        priority="[[item.priority]]",
+        core="[[item.core]]">
       </buttress-db-data-service>
     </template>
 
@@ -65,6 +67,7 @@
           endpoint: String,
           token: String,
           appId: String,
+          apiPath: String,
           userId: String,
 
           logging: {
@@ -233,6 +236,7 @@
             status: 'uninitialised',
             priority: 1,
             data: [],
+            core: true,
             metadata: {}
           }) - 1;
           this.set(['db', key], this.get(['__collections', idx]));
@@ -247,6 +251,7 @@
             status: 'uninitialised',
             priority: 1,
             data: [],
+            core: false,
             metadata: {}
           }) - 1;
           this.set(['db', key], this.get(['__collections', idx]));
