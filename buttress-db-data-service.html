@@ -37,6 +37,7 @@
         return {
           token: String,
           endpoint: String,
+          apiPath: String,
           status: {
             type: String,
             value: '',
@@ -49,6 +50,11 @@
           },
 
           fingerPrint: Object,
+
+          core: {
+            type: Boolean,
+            value: false
+          },
 
           priority: {
             type: Number,
@@ -85,11 +91,11 @@
           },
           vectorBaseUrl: {
             type: String,
-            computed: "__computeVectorBaseUrl(endpoint, route)"
+            computed: "__computeVectorBaseUrl(endpoint, route, core, apiPath)"
           },
           scalarBaseUrl: {
             type: String,
-            computed: "__computeScalarBaseUrl(endpoint, route, rqEntityId)"
+            computed: "__computeScalarBaseUrl(endpoint, route, rqEntityId, core, apiPath)"
           },
           requestQueue: {
             type: Array,
@@ -667,10 +673,18 @@
       }
 
       __computeVectorBaseUrl(endpoint, route) {
-        return `${endpoint}/api/v1/${route}`
+        if (!this.get('core') && this.get('apiPath')) {
+          return `${endpoint}/${this.get('apiPath')}/api/v1/${route}`;
+        }
+
+        return `${endpoint}/api/v1/${route}`;
       }
       __computeScalarBaseUrl(endpoint) {
-        return `${endpoint}/api/v1/${this.route}/${this.rqEntityId}`
+        if (!this.get('core') && this.get('apiPath')) {
+          return `${endpoint}/${this.get('apiPath')}/api/v1/${this.route}/${this.rqEntityId}`;
+        }
+
+        return `${endpoint}/api/v1/${this.route}/${this.rqEntityId}`;
       }
     }
     window.customElements.define(ButtressDbDataService.is, ButtressDbDataService);
