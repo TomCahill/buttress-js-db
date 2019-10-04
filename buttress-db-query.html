@@ -103,7 +103,7 @@
       }
 
       __docStatus() {
-        if (!this.doc.loaded) {
+        if (!this.doc || !this.doc.loaded) {
           if (this.logging) console.log(this.logLabel, 'silly', '__docStatus', this.doc.status, this.doc);
           return;
         }
