@@ -93,7 +93,9 @@ window.Buttress.Worker = () => {
       const tx = db.transaction(payload.collection);
       const collection = tx.objectStore(payload.collection);
       const cmd = collection.getAll();
+      console.time(`readAll ${payload.collection}`);
       tx.oncomplete = () => {
+        console.timeEnd(`readAll ${payload.collection}`);
         return resolve(cmd.result);
       };
       tx.onerror = (err) => {
