@@ -8,12 +8,13 @@ window.Buttress.Worker = () => {
     write: (payload) => __write(payload.collection, collection.item),
     bulkWrite: (payload) => __bulkWrite(payload),
     readAll: (payload) => __readAll(payload),
+    clear: (payload) => __clear(payload)
   }
   
   self.onmessage = function(event) {
     const payload = event.data;
     if (!payload) return;
-    if (!payload.task) throw new Error('Task name not passed');
+    if (!payload.task) return;
 
     const id = (payload.id) ? payload.id : null;
     const task = tasks[payload.task];
@@ -71,18 +72,43 @@ window.Buttress.Worker = () => {
     });
   };
 
+  const __clear = (payload) => {
+    if (!db) return Promise.reject('DB isn\'t init');
+
+    console.log('__clear', payload.collection);
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(payload.collection, 'readwrite');
+      const collection = tx.objectStore(payload.collection);
+      collection.clear();
+      tx.oncomplete = () => {
+        return resolve(true);
+      };
+      tx.onerror = (err) => {
+        return reject(err);
+      };
+    });
+  };
+
   const __bulkWrite = (payload) => {
     if (!db) return Promise.reject('DB isn\'t init');
 
     if (!payload.items) return Promise.reject('Items not part of bulk write payload');
 
     console.log('__bulkWrite', payload.collection, payload.items.length);
-  
+
     return new Promise((resolve, reject) => {
-      return payload.items.reduce((prev, item) => {
-        return prev.then(() => __write(payload.collection, item));
-      }, Promise.resolve())
-      .then(resolve);
+      const tx = db.transaction(payload.collection, 'readwrite');
+      const collection = tx.objectStore(payload.collection);
+      payload.items.forEach((item) => {
+        collection.add(item);
+      });
+      tx.oncomplete = () => {
+        return resolve(true);
+      };
+      tx.onerror = (err) => {
+        return reject(err);
+      };
     });
   }
 
@@ -90,7 +116,7 @@ window.Buttress.Worker = () => {
     if (!db) return Promise.reject('DB isn\'t init');
   
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(payload.collection);
+      const tx = db.transaction(payload.collection, 'readonly');
       const collection = tx.objectStore(payload.collection);
       const cmd = collection.getAll();
       console.time(`readAll ${payload.collection}`);
@@ -103,4 +129,6 @@ window.Buttress.Worker = () => {
       };
     });
   };
+
+  return tasks;
 };
