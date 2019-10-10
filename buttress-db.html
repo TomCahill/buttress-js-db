@@ -6,6 +6,7 @@
 
 <!-- TEMP HACK - Needs moving to component -->
 <script src="./buttress-db-schema.js"></script>
+<script src="./buttress-db-worker.js"></script>
 <script src="../sugar/dist/sugar.js"></script>
 <script src="../fingerprintjs2/dist/fingerprint2.min.js"></script>
 
@@ -39,7 +40,8 @@
         finger-print="{{__fingerPrint}}",
         metadata="{{item.metadata}}",
         priority="[[item.priority]]",
-        core="[[item.core]]">
+        core="[[item.core]]",
+        auto-load>
       </buttress-db-data-service>
     </template>
 
@@ -159,6 +161,37 @@
           __numRequests: {
             type: Number,
             value: 0
+          },
+
+          settings: {
+            type: Object,
+            notify: true,
+            value: function() {
+              return {
+                worker: false,
+                local_sync: false,
+                local_read: false,
+                network_sync: false,
+                network_read: true,
+              };
+            }
+          },
+
+          __localDB: {
+            type: Object
+          },
+          __worker: {
+            type: Object
+          },
+          __workerTasks: {
+            type: Object,
+            value: function() {
+              return {};
+            }
+          },
+          __workerId: {
+            type: Number,
+            value: 1
           }
         };
       }
@@ -166,7 +199,8 @@
       static get observers() {
         return [
           '__tokenChanged(token)',
-          '__dbSchemaChanged(coreCollections, dbSchema.*)'
+          '__dbSchemaChanged(coreCollections, dbSchema.*)',
+          '__settingChanged(settings.*)'
         ];
       }
       
@@ -177,6 +211,14 @@
       }
       
       connectedCallback() {
+        super.connectedCallback();
+        const settings = this.get('settings');
+
+        if (!window.Fingerprint2) {
+          throw new Error('User likely has ad block running, TODO: Display a better message');
+          return;
+        }
+
         new Fingerprint2().get(result => {
           let nibbles = result.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
           let id = 0;
@@ -187,6 +229,42 @@
         });
 
         this.set('db.Factory', AppDb.Factory);
+
+        // Check local storage settings
+        if ('localStorage' in window) {
+          Object.keys(settings).forEach((key) => {
+            const value = this.getOption(key);
+            if (value === undefined || value === null) return; // Skip and use default
+            this.set(`settings.${key}`, value);
+          });
+        }
+        
+        if ('indexedDB' in window) {
+          if (window.Buttress && window.Buttress.Worker && this.get('settings.worker')) {
+            console.log('Talking to indexedDB via worker');
+            const workerBlob = new Blob(['('+window.Buttress.Worker.toString()+')()'], {type: 'application/javascript'});
+
+            try {
+              const dbWorker = new Worker(URL.createObjectURL(workerBlob));
+              dbWorker.onmessage = (ev) => this.__workerMessage(ev);
+              dbWorker.onerror = (ev) => this.__workerError(ev);
+              this.set('__worker', dbWorker);
+            } catch (err) {
+              console.error(err);
+            }
+          } else {
+            console.log('Talking to indexedDB directly');
+            this.set('__localDB', window.Buttress.Worker());
+          }
+        }
+      }
+
+      __settingChanged(cr) {
+        const path = cr.path.split('.');
+        if (!path || path.length !== 2) return;
+        path.shift();
+
+        this.setOption(path, cr.value);
       }
 
       __dataServiceReady(ev){
@@ -257,10 +335,54 @@
           this.set(['db', key], this.get(['__collections', idx]));
           this.linkPaths(['db', key], `__collections.${idx}`);
         });
+
+        if (this.get('__localDB')) {
+          const collections = [].concat(schema).map(c => Sugar.String.camelize(c.name, false));
+          this.get('__localDB').init({
+            task: 'init',
+            name: 'Buttress',
+            version: 1,
+            collections: collections
+          })
+          .then(() => {
+            if (this.get('settings.local_read') === true) {
+              this.__localLoadCollections(collections)
+                .then(result => {
+                  this.set('loaded', true);
+                  this.set('loading.loaded', true);
+                })
+            }
+          });
+        }
+
+        if (this.get('__worker')) {
+          const collections = [].concat(schema).map(c => Sugar.String.camelize(c.name, false));
+          this.__workerTask({
+            task: 'init',
+            name: 'Buttress',
+            version: 1,
+            collections: collections
+          })
+          .then(() => {
+            if (this.get('settings.local_read') === true) {
+              this.__workerLoadCollections(collections)
+                .then(result => {
+                  this.set('loaded', true);
+                  this.set('loading.loaded', true);
+                })
+            }
+          });
+        }
       }
 
       __onDataLoaded(ev) {
         const services = this.get('__services');
+
+        // No check for network load
+        if (!this.get('settings.network_read')) {
+          console.log('Data service disabled network call');
+          return;
+        }
 
         if (!ev && services.length > 0) {
           services.shift().triggerGet();
@@ -282,6 +404,145 @@
 
         services.shift().triggerGet();
         this.__numRequests++;
+      }
+
+      // Local Storage
+      getOption(key) {
+        if (!'localStorage' in window) return false;
+        const value = window.localStorage.getItem(`buttress_${key}`);
+        return typeof value == 'string' ? JSON.parse(value) : value;
+      }
+      setOption(key, value) {
+        if (!'localStorage' in window) return false;
+        window.localStorage.setItem(`buttress_${key}`, value);
+      }
+
+      // Worker IO
+      clearCollections() {
+        let method = null;
+
+        if (this.get('__localDB')) method = (payload) => this.get('__localDB').clear(payload);
+        if (this.get('__worker'))  method = (payload) => this.__workerTask(payload);
+
+        if (!method) return;
+
+        const results = this.get('__collections').reduce((out, collection) => {
+          const collectionName = Sugar.String.camelize(collection.name, false);
+          console.time(`Cleared ${collectionName}`);
+          const promise = method({
+            task: 'clear',
+            collection: collectionName
+          })
+          .then(() => {
+            console.timeEnd(`Cleared ${collectionName}`);
+          });
+
+          out.push(promise);
+          return out;
+        }, []);
+
+        return Promise.all(results);
+      }
+
+      saveCollections() {
+        let method = null;
+
+        if (this.get('__localDB')) method = (payload) => this.get('__localDB').bulkWrite(payload);
+        if (this.get('__worker'))  method = (payload) => this.__workerTask(payload);
+
+        if (!method) return;
+
+        const results = this.get('__collections').reduce((out, collection) => {
+          const collectionName = Sugar.String.camelize(collection.name, false);
+          console.time(`Write ${collection.data.length} to ${collectionName}`);
+          const promise = method({
+            task: 'bulkWrite',
+            collection: collectionName,
+            items: collection.data
+          })
+          .then(() => {
+            console.timeEnd(`Write ${collection.data.length} to ${collectionName}`);
+          });
+
+          out.push(promise);
+          return out;
+        }, []);
+
+        return Promise.all(results);
+      }
+
+      __localLoadCollections(collections) {
+        console.log('__localLoadCollections', collections.length);
+        const load = (collection) => {
+          console.log(`local ${collection} load`);
+          console.time(`local ${collection} loaded`);
+          return this.get('__localDB').readAll({
+            task: 'readAll',
+            collection: collection
+          })
+          .then(data => {
+            console.timeEnd(`local ${collection} loaded`);
+            this.set(['db', collection, 'data'], data);
+            this.set(['db', collection, 'loaded'], true);
+          });
+        };
+
+        return Promise.all(collections.map(load));
+      }
+
+      __workerLoadCollections(collections) {
+        const load = (collection) => {
+          console.time(`local ${collection} loaded`);
+          return this.__workerTask({
+            task: 'readAll',
+            collection: collection
+          })
+          .then(data => {
+            console.timeEnd(`local ${collection} loaded`);
+            this.set(['db', collection, 'data'], data.result);
+            this.set(['db', collection, 'loaded'], true);
+          });
+        }
+
+        return Promise.all(collections.map(load));
+      }
+
+      __workerTask(payload) {
+        payload.id = this.get('__workerId');
+
+        this.get('__worker').postMessage(payload);
+
+        this.set('__workerId', this.get('__workerId') + 1);
+
+        return new Promise((resolve, reject) => {
+          this.set(`__workerTasks.${payload.id}`, {
+            id: payload.id,
+            resolve: resolve,
+            reject: resolve
+          });
+        });
+      }
+
+      __workerMessage(ev) {
+        const workerTasks = this.get('__workerTasks');
+        const payload = ev.data;
+
+        if (payload.id && workerTasks[payload.id]) {
+          workerTasks[payload.id].resolve(payload);
+          delete workerTasks[payload.id];
+          return;
+        }
+
+        if (!payload.type) console.log(payload);
+
+        switch(payload.type) {
+          default:
+            console.log(payload);
+            break;
+        }
+      }
+      __workerError(ev) {
+        console.log('__workerError', ev);
       }
     }
 
