@@ -35,6 +35,9 @@
             type: Object,
             notify: true
           },
+          dataPath: {
+            type: String
+          },
           numResults: {
             type: Number,
             value: 0,
@@ -147,6 +150,16 @@
 
           if (this.logging) console.log(this.logLabel, 'silly', this.query);
 
+          let crPath = null;
+          if (this.get('query.__crPath') && this.get('dataPath')) {
+            // Fetch the change record path from the query if passed through
+            // remove the data path from the change record path
+            crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
+            if (crPath.indexOf('.') === 0) {
+              crPath = crPath.substring(1);
+            }
+          }
+
           let data = this.doc.data;
           if (this.logging) console.log(this.logLabel, 'silly', data);
           try {
@@ -158,7 +171,7 @@
           if (this.logging) console.log(this.logLabel, 'silly', data);
 
           if (this.get('sortPath')) {
-            data = data.sort((a, b) => this.__sort(a, b));
+            data.sort((a, b) => this.__sort(a, b));
           }
 
           if (this.limit > 0) {
@@ -166,29 +179,32 @@
             this.set('numResults', data.length);
             this.set('findAllUnpaged', data.concat([]));
 
-            if (this.logging) console.log(this.logLabel, 'silly', this.page, this.limit, this.numPages);
+            if (this.logging) console.log(this.logLabel, 'silly', `Page: ${this.page}, Limit ${this.limit}, NumPages: ${this.numPages}`);
             data = data.splice((this.page-1) * this.limit, this.limit);
             if (this.logging) console.log(this.logLabel, 'debug', data);
           }
 
           this.set('findAll', data);
-          data.forEach((d, idx) => {
-            let dataIndex = this.doc.data.indexOf(d);
 
-            this.unlinkPaths(`findAll.#${idx}`);
-            if (dataIndex !== -1) {
-              this.linkPaths(`findAll.#${idx}`, `doc.data.#${dataIndex}`);
-              if (this.logging) console.log(this.logLabel, 'silly', `Query: findAll.#${idx} linked to doc.data.#${dataIndex}`);
-            }
-          });
-
-          let dataIndex = data.length > 0 ? this.doc.data.indexOf(data[0]): -1;
           this.set('findOne', data.length > 0 ? data[0] : null);
 
-          this.unlinkPaths('findOne');
-          if (dataIndex !== -1) {
-            this.linkPaths('findOne', `doc.data.#${dataIndex}`);
-            if (this.logging) console.log(this.logLabel, 'silly', `Query: findOne linked to doc.data.#${dataIndex}`);
+          if (crPath) {
+            const splitCRPath = crPath.split('.');
+            const docCRIdx = splitCRPath.shift();
+            const docCRItem = this.doc.data[docCRIdx];
+
+            const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
+            const findAllIdx = this.get('findAll').findIndex(i => i === docCRItem);
+
+            if (findAllUnpagedIdx !== -1) {
+              this.notifyPath(`findAllUnpaged.${findAllUnpagedIdx}.${splitCRPath.join('.')}`);
+            }
+            if (findAllIdx !== -1) {
+              this.notifyPath(`findAll.${findAllIdx}.${splitCRPath.join('.')}`);
+            }
+            if (docCRItem === this.get('findOne')) {
+              this.notifyPath(`findOne.${splitCRPath.join('.')}`);
+            }
           }
 
           if (this.logging) console.log(this.logLabel, 'silly', this.findOne);
@@ -202,6 +218,10 @@
 
         for (let field in query) {
           if (!query.hasOwnProperty(field)) {
+            continue;
+          }
+
+          if (field === '__crPath') {
             continue;
           }
 
