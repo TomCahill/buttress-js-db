@@ -196,8 +196,6 @@
             const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
             const findAllIdx = this.get('findAll').findIndex(i => i === docCRItem);
 
-            console.log(crPath);
-
             if (findAllUnpagedIdx !== -1) {
               this.notifyPath(`findAllUnpaged.${findAllUnpagedIdx}.${splitCRPath.join('.')}`);
             }
