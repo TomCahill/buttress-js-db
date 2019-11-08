@@ -166,30 +166,13 @@
             this.set('numResults', data.length);
             this.set('findAllUnpaged', data.concat([]));
 
-            if (this.logging) console.log(this.logLabel, 'silly', this.page, this.limit, this.numPages);
+            if (this.logging) console.log(this.logLabel, 'silly', `Page: ${this.page}, Limit ${this.limit}, NumPages: ${this.numPages}`);
             data = data.splice((this.page-1) * this.limit, this.limit);
             if (this.logging) console.log(this.logLabel, 'debug', data);
           }
 
           this.set('findAll', data);
-          data.forEach((d, idx) => {
-            let dataIndex = this.doc.data.indexOf(d);
-
-            this.unlinkPaths(`findAll.#${idx}`);
-            if (dataIndex !== -1) {
-              this.linkPaths(`findAll.#${idx}`, `doc.data.#${dataIndex}`);
-              if (this.logging) console.log(this.logLabel, 'silly', `Query: findAll.#${idx} linked to doc.data.#${dataIndex}`);
-            }
-          });
-
-          let dataIndex = data.length > 0 ? this.doc.data.indexOf(data[0]): -1;
           this.set('findOne', data.length > 0 ? data[0] : null);
-
-          this.unlinkPaths('findOne');
-          if (dataIndex !== -1) {
-            this.linkPaths('findOne', `doc.data.#${dataIndex}`);
-            if (this.logging) console.log(this.logLabel, 'silly', `Query: findOne linked to doc.data.#${dataIndex}`);
-          }
 
           if (this.logging) console.log(this.logLabel, 'silly', this.findOne);
 
