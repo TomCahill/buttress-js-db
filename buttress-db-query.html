@@ -121,6 +121,41 @@
       __queryDebouncer() {
         this.set('loading', true);
 
+        // If we have an update to a path notify straight away
+        let crPath = null;
+        if (this.get('query.__crPath') && this.get('dataPath')) {
+          // Fetch the change record path from the query if passed through
+          // remove the data path from the change record path
+          crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
+          if (crPath.indexOf('.') === 0) {
+            crPath = crPath.substring(1);
+          }
+        }
+        if (crPath) {
+          const splitCRPath = crPath.split('.');
+          const docCRIdx = splitCRPath.shift();
+          const docCRItem = this.doc.data[docCRIdx];
+
+          if (this.get('findAllUnpaged')) {
+            const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
+            if (findAllUnpagedIdx !== -1) {
+              this.notifyPath(`findAllUnpaged.${findAllUnpagedIdx}.${splitCRPath.join('.')}`);
+            }
+          }
+          if (this.get('findAll')) {
+            const findAllIdx = this.get('findAll').findIndex(i => i === docCRItem);
+            if (findAllIdx !== -1) {
+              this.notifyPath(`findAll.${findAllIdx}.${splitCRPath.join('.')}`);
+            }
+          }
+          if (this.get('findOne')) {
+            if (docCRItem === this.get('findOne')) {
+              this.notifyPath(`findOne.${splitCRPath.join('.')}`);
+            }
+          }
+        }
+
+        // Debounce the query till later
         this.set('_debouncer', Polymer.Debouncer.debounce(
           this.get('_debouncer'),
           Polymer.Async.timeOut.after(100),
@@ -150,16 +185,6 @@
 
           if (this.logging) console.log(this.logLabel, 'silly', this.query);
 
-          let crPath = null;
-          if (this.get('query.__crPath') && this.get('dataPath')) {
-            // Fetch the change record path from the query if passed through
-            // remove the data path from the change record path
-            crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
-            if (crPath.indexOf('.') === 0) {
-              crPath = crPath.substring(1);
-            }
-          }
-
           let data = this.doc.data;
           if (this.logging) console.log(this.logLabel, 'silly', data);
           try {
@@ -187,25 +212,6 @@
           this.set('findAll', data);
 
           this.set('findOne', data.length > 0 ? data[0] : null);
-
-          if (crPath) {
-            const splitCRPath = crPath.split('.');
-            const docCRIdx = splitCRPath.shift();
-            const docCRItem = this.doc.data[docCRIdx];
-
-            const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
-            const findAllIdx = this.get('findAll').findIndex(i => i === docCRItem);
-
-            if (findAllUnpagedIdx !== -1) {
-              this.notifyPath(`findAllUnpaged.${findAllUnpagedIdx}.${splitCRPath.join('.')}`);
-            }
-            if (findAllIdx !== -1) {
-              this.notifyPath(`findAll.${findAllIdx}.${splitCRPath.join('.')}`);
-            }
-            if (docCRItem === this.get('findOne')) {
-              this.notifyPath(`findOne.${splitCRPath.join('.')}`);
-            }
-          }
 
           if (this.logging) console.log(this.logLabel, 'silly', this.findOne);
 
