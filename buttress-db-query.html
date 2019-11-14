@@ -120,6 +120,11 @@
       }
       __queryDebouncer() {
         this.set('loading', true);
+        const doc = this.get('doc');
+        if (!doc || !doc.loaded) {
+          if (this.logging) console.log(this.logLabel, 'debug', '__queryDebouncer', 'no doc');
+          return;
+        }
 
         // If we have an update to a path notify straight away
         let crPath = null;
@@ -134,7 +139,7 @@
         if (crPath) {
           const splitCRPath = crPath.split('.');
           const docCRIdx = splitCRPath.shift();
-          const docCRItem = this.doc.data[docCRIdx];
+          const docCRItem = doc.data[docCRIdx];
 
           if (this.get('findAllUnpaged')) {
             const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
@@ -172,10 +177,6 @@
           if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
           if (!this.query) {
             if (this.logging) console.log(this.logLabel, 'silly', '__query', 'no query');
-            return resolve(false);
-          }
-          if (!this.doc || !this.doc.loaded) {
-            if (this.logging) console.log(this.logLabel, 'debug', '__query', 'no doc');
             return resolve(false);
           }
           if (this.get('paused') === true) {
