@@ -33,8 +33,8 @@
 
           connected: {
             type: Boolean,
-            value: false,
-            notify: true
+            notify: true,
+            value: false
           },
           rxEvents: {
             type: Array,
@@ -92,14 +92,15 @@
             }
           });
           this.socket.on('connect',() => {
-            this.connected = true;
+            this.set('connected', true);
             if (this.get('logging')) console.log('debug', 'Connected');
             this.__configureRxEvents();
           });
           this.socket.on('disconnect',() => {
-            this.connected = false;
+            this.set('connected', false);
           });
         } catch (err) {
+          this.set('connected', false);
           if (this.get('logging')) console.log('err', err);
           this.dispatchEvent(new CustomEvent('error', {detail: err, bubbles: true, composed: true}));
         }

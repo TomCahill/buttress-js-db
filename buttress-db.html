@@ -14,7 +14,7 @@
   <template>
     <style>
       :host {
-        display: block;
+        display: none;
       }
     </style>
 
@@ -51,6 +51,8 @@
       app-id="[[appId]]",
       user-id="[[userId]]",
       db="{{db}}",
+      connected="{{io.connected}}",
+      synced="{{io.synced}}",
       logging="[[logging]]"
     ></buttress-db-realtime-handler>
   </template>
@@ -136,6 +138,16 @@
               //   metadata: {}
               // }
               return {};
+            },
+            notify: true
+          },
+          io: {
+            type: Object,
+            value: function() {
+              return {
+                connected: false,
+                synced: true
+              };
             },
             notify: true
           },

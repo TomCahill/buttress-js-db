@@ -13,6 +13,7 @@
       endpoint="[[endpoint]]",
       app-id="[[appId]]",
       token="[[token]]",
+      connected="{{connected}}",
       on-rx-event="__handleRxEvent"
     ></buttress-db-socket-io>
   </template>
@@ -36,6 +37,17 @@
           logging: {
             type: Boolean,
             value: false
+          },
+
+          connected: {
+            type: Boolean,
+            notify: true,
+            value: false
+          },
+          synced: {
+            type: Boolean,
+            notify: true,
+            value: true
           },
 
           lastSequence: {
@@ -66,6 +78,7 @@
 
         if (lastSequence !== null) {
           if (lastSequence === sequence) {
+            this.set('synced', false);
             this.dispatchEvent(new CustomEvent('realtime-payload-duplicate', {
               detail: {
                 payload: ev.detail.payload,
@@ -76,6 +89,7 @@
             return;
           }
           if (lastSequence + 1 !== sequence) {
+            this.set('synced', false);
             this.dispatchEvent(new CustomEvent('realtime-payload-mismatch', {
               detail: {
                 payload: ev.detail.payload,
