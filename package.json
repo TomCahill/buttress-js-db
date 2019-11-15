@@ -1,7 +1,7 @@
 {
   "name": "buttress-js-db",
   "description": "A set of elements enabling realtime data handling from ButtressJS",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "author": "Lighten",
   "contributors": [
     "Chris Bates-Keegan <chris@wearelighten.co.uk>",
