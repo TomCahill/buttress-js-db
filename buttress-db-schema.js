@@ -330,10 +330,10 @@ const AppDb = {
           res = config.__default !== undefined ? config.__default : 0;
           break;
         case 'array':
-          res = config.__default !== undefined ? config.__default : [];
+          res = [];
           break;
         case 'object':
-          res = config.__default !== undefined ? config.__default : {};
+          res = {};
           break;
         case 'id':
           res = config.__default !== undefined ? config.__default : null;
