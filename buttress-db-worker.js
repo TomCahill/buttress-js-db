@@ -1,6 +1,5 @@
-if (!window.Buttress) window.Buttress = {};
 
-window.Buttress.Worker = () => {
+const Worker = () => {
   let db = null;
 
   const tasks = {
@@ -131,4 +130,8 @@ window.Buttress.Worker = () => {
   };
 
   return tasks;
+};
+
+export {
+  Worker
 };

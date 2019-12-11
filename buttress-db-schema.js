@@ -351,3 +351,7 @@ const AppDb = {
     }
   }
 }
+
+export {
+  AppDb
+};
