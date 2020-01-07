@@ -6,15 +6,15 @@ import './buttress-db-data-service.js';
 import './buttress-db-realtime-handler.js';
 
 import { AppDb } from './buttress-db-schema.js';
-import { Worker } from './buttress-db-worker.js';
+import Worker from './buttress-db-worker.js';
 
 const sugar = document.createElement('script');
 sugar.setAttribute('src', 'node_modules/sugar/dist/sugar.js');
 document.head.appendChild(sugar);
 
-const fingerprintjs2 = document.createElement('script');
-fingerprintjs2.setAttribute('src', 'node_modules/fingerprintjs2/dist/fingerprintjs2.min.js');
-document.head.appendChild(fingerprintjs2);
+const fingerprintScript = document.createElement('script');
+fingerprintScript.setAttribute('src', 'node_modules/fingerprintjs2/dist/fingerprint2.min.js');
+document.head.appendChild(fingerprintScript);
 
 class ButtressDb extends PolymerElement {
   static get is() { return 'buttress-db'; }
@@ -227,19 +227,18 @@ class ButtressDb extends PolymerElement {
     super.connectedCallback();
     const settings = this.get('settings');
 
-    if (!window.Fingerprint2) {
-      throw new Error('User likely has ad block running, TODO: Display a better message');
-      return;
-    }
-
-    new Fingerprint2().get(result => {
-      let nibbles = result.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
-      let id = 0;
-      nibbles.forEach((n,idx) => id |= n << idx);
-      this.set('__fingerPrint.machineId', id);
-      this.set('__fingerPrint.processId', Math.floor(Math.random() * 100000) % 0xFFFF);
-      this.set('__fingerPrint.inc', Math.floor(Math.random() * 65535) % 0xFFFF);
-    });
+    fingerprintScript.onload = () => {
+      Fingerprint2.get(components => {
+        var values = components.map(function (component) { return component.value });
+        var murmur = Fingerprint2.x64hash128(values.join(''), 31);
+        let nibbles = murmur.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
+        let id = 0;
+        nibbles.forEach((n,idx) => id |= n << idx);
+        this.set('__fingerPrint.machineId', id);
+        this.set('__fingerPrint.processId', Math.floor(Math.random() * 100000) % 0xFFFF);
+        this.set('__fingerPrint.inc', Math.floor(Math.random() * 65535) % 0xFFFF);
+      });
+    };
 
     this.set('db.Factory', AppDb.Factory);
 
@@ -253,9 +252,9 @@ class ButtressDb extends PolymerElement {
     }
     
     if ('indexedDB' in window) {
-      if (window.Buttress && window.Buttress.Worker && this.get('settings.worker')) {
+      if (Worker && this.get('settings.worker')) {
         console.log('Talking to indexedDB via worker');
-        const workerBlob = new Blob(['('+window.Buttress.Worker.toString()+')()'], {type: 'application/javascript'});
+        const workerBlob = new Blob(['('+Worker.toString()+')()'], {type: 'application/javascript'});
 
         try {
           const dbWorker = new Worker(URL.createObjectURL(workerBlob));
@@ -267,7 +266,7 @@ class ButtressDb extends PolymerElement {
         }
       } else {
         console.log('Talking to indexedDB directly');
-        this.set('__localDB', window.Buttress.Worker());
+        this.set('__localDB', Worker());
       }
     }
   }
