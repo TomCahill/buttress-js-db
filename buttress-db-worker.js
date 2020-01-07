@@ -132,6 +132,4 @@ const Worker = () => {
   return tasks;
 };
 
-export {
-  Worker
-};
+export default Worker;
