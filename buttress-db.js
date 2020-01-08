@@ -255,7 +255,7 @@ class ButtressDb extends PolymerElement {
         const workerBlob = new Blob(['('+Worker.toString()+')()'], {type: 'application/javascript'});
 
         try {
-          const dbWorker = new Worker(URL.createObjectURL(workerBlob));
+          const dbWorker = Worker(URL.createObjectURL(workerBlob));
           dbWorker.onmessage = (ev) => this.__workerMessage(ev);
           dbWorker.onerror = (ev) => this.__workerError(ev);
           this.set('__worker', dbWorker);
