@@ -188,6 +188,17 @@ class ButtressDb extends PolymerElement {
         }
       },
 
+      nonModuleDependencies: {
+        type: Array,
+        value: function() {
+          return [{
+            name: 'fingerprint',
+            loaded: false,
+            error: false
+          }]
+        }
+      },
+
       __localDB: {
         type: Object
       },
@@ -209,7 +220,7 @@ class ButtressDb extends PolymerElement {
 
   static get observers() {
     return [
-      '__tokenChanged(token)',
+      '__tokenChanged(token, nonModuleDependencies.*)',
       '__dbSchemaChanged(coreCollections, dbSchema.*)',
       '__settingChanged(settings.*)'
     ];
@@ -226,6 +237,9 @@ class ButtressDb extends PolymerElement {
     const settings = this.get('settings');
 
     fingerprintScript.onload = () => {
+      const depIdx = this.get('nonModuleDependencies').findIndex(d => d.name === 'fingerprint');
+      this.set(`nonModuleDependencies.${depIdx}.loaded`, true);
+
       Fingerprint2.get(components => {
         var values = components.map(function (component) { return component.value });
         var murmur = Fingerprint2.x64hash128(values.join(''), 31);
@@ -236,6 +250,12 @@ class ButtressDb extends PolymerElement {
         this.set('__fingerPrint.processId', Math.floor(Math.random() * 100000) % 0xFFFF);
         this.set('__fingerPrint.inc', Math.floor(Math.random() * 65535) % 0xFFFF);
       });
+    };
+    fingerprintScript.onerror = () => {
+      const depIdx = this.get('nonModuleDependencies').findIndex(d => d.name === 'fingerprint');
+      this.set(`nonModuleDependencies.${depIdx}.error`, true);
+      this.set('error', true);
+      this.set('lastError', new Error('Unable to load fingerprint, this is required for generating ids'));
     };
 
     this.set('db.Factory', AppDb.Factory);
@@ -293,10 +313,11 @@ class ButtressDb extends PolymerElement {
 
   __tokenChanged() {
     const token = this.get('token');
-    if (!token){
+    const nonModuleDependencies = this.get('nonModuleDependencies');
+    if (!token || nonModuleDependencies.some(d => d.loaded === false)){
       return;
     }
-    
+
     // Fetch app schema using provided token
     this.set('rqSchemaParams', {
       urq: Date.now(),
