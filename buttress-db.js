@@ -8,9 +8,7 @@ import './buttress-db-realtime-handler.js';
 import { AppDb } from './buttress-db-schema.js';
 import Worker from './buttress-db-worker.js';
 
-const sugar = document.createElement('script');
-sugar.setAttribute('src', 'node_modules/sugar/dist/sugar.js');
-document.head.appendChild(sugar);
+import 'sugar/dist/sugar';
 
 const fingerprintScript = document.createElement('script');
 fingerprintScript.setAttribute('src', 'node_modules/fingerprintjs2/dist/fingerprint2.min.js');
