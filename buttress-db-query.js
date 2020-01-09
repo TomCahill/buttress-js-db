@@ -1,4 +1,7 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
+import { timeOut } from '@polymer/polymer/lib/utils/async.js';
+import { Debouncer } from '@polymer/polymer/lib/utils/debounce.js';
+import { get as getPath } from '@polymer/polymer/lib/utils/path.js';
 
 class ButtressDbQuery extends PolymerElement {
   static get is() { return 'buttress-db-query'; }
@@ -155,9 +158,9 @@ class ButtressDbQuery extends PolymerElement {
     }
 
     // Debounce the query till later
-    this.set('_debouncer', Polymer.Debouncer.debounce(
+    this.set('_debouncer', Debouncer.debounce(
       this.get('_debouncer'),
-      Polymer.Async.timeOut.after(100),
+      timeOut.after(100),
       () => {
         this.__query()
         .then(() => {
@@ -283,7 +286,7 @@ class ButtressDbQuery extends PolymerElement {
   }
 
   __parsePath(obj, path) {
-    return [Polymer.Base.get(path, obj)];
+    return [getPath(obj, path)];
   }
 
   __executeQuery(data, field, operator, operand) {
