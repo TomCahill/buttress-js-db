@@ -48,6 +48,7 @@ class ButtressDb extends PolymerElement {
           metadata="{{item.metadata}}",
           priority="[[item.priority]]",
           core="[[item.core]]",
+          logging="[[logging]]",
           auto-load>
         </buttress-db-data-service>
       </template>
@@ -179,6 +180,7 @@ class ButtressDb extends PolymerElement {
         notify: true,
         value: function() {
           return {
+            logging: false,
             worker: false,
             local_sync: false,
             local_read: false,
@@ -266,12 +268,15 @@ class ButtressDb extends PolymerElement {
         const value = this.getOption(key);
         if (value === undefined || value === null) return; // Skip and use default
         this.set(`settings.${key}`, value);
+        if (key === 'logging' && value === true) {
+          this.set(`logging`, true);
+        }
       });
     }
     
     if ('indexedDB' in window) {
       if (Worker && this.get('settings.worker')) {
-        console.log('Talking to indexedDB via worker');
+        if (this.get('logging')) console.log('Talking to indexedDB via worker');
         const workerBlob = new Blob(['('+Worker.toString()+')()'], {type: 'application/javascript'});
 
         try {
@@ -283,7 +288,7 @@ class ButtressDb extends PolymerElement {
           console.error(err);
         }
       } else {
-        console.log('Talking to indexedDB directly');
+        if (this.get('logging')) console.log('Talking to indexedDB directly');
         this.set('__localDB', Worker());
       }
     }
@@ -411,7 +416,7 @@ class ButtressDb extends PolymerElement {
 
     // No check for network load
     if (!this.get('settings.network_read')) {
-      console.log('Data service disabled network call');
+      if (this.get('logging')) console.warn('Data service disabled network call');
       return;
     }
 
@@ -503,9 +508,9 @@ class ButtressDb extends PolymerElement {
   }
 
   __localLoadCollections(collections) {
-    console.log('__localLoadCollections', collections.length);
+    if (this.get('logging')) console.log('__localLoadCollections', collections.length);
     const load = (collection) => {
-      console.log(`local ${collection} load`);
+      if (this.get('logging')) console.log(`local ${collection} load`);
       console.time(`local ${collection} loaded`);
       return this.get('__localDB').readAll({
         task: 'readAll',
@@ -564,16 +569,16 @@ class ButtressDb extends PolymerElement {
       return;
     }
 
-    if (!payload.type) console.log(payload);
+    if (this.get('logging') && !payload.type) console.log(payload);
 
     switch(payload.type) {
       default:
-        console.log(payload);
+        if (this.get('logging')) console.log(payload);
         break;
     }
   }
   __workerError(ev) {
-    console.log('__workerError', ev);
+    if (this.get('logging')) console.error('__workerError', ev);
   }
 }
 

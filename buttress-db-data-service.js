@@ -167,8 +167,8 @@ class ButtressDbDataService extends PolymerElement {
    * @private
    */
   __dataChanges(cr) {
-    // if (this.get('logging')) console.log(`Internal Change: ${this.__internalChange}`);
     if (this.__internalChange__) {
+      if (this.get('logging')) console.log(`Internal Change: ${this.__internalChange}`, cr);
       delete this.__internalChange__;
       return;
     }

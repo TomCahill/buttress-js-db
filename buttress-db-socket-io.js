@@ -1,8 +1,8 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
-const socketIO = document.createElement('script');
-socketIO.setAttribute('src', 'node_modules/socket.io-client/dist/socket.io.js');
-document.head.appendChild(socketIO);
+const socketIOScript = document.createElement('script');
+socketIOScript.setAttribute('src', 'node_modules/socket.io-client/dist/socket.io.js');
+document.head.appendChild(socketIOScript);
 
 class ButtressDbSocketIo extends PolymerElement {
   static get is() { return 'buttress-db-socket-io'; }
@@ -24,6 +24,11 @@ class ButtressDbSocketIo extends PolymerElement {
       appId: String,
 
       logging: {
+        type: Boolean,
+        value: false
+      },
+
+      _scriptDependencyLoaded: {
         type: Boolean,
         value: false
       },
@@ -57,14 +62,27 @@ class ButtressDbSocketIo extends PolymerElement {
   }
   static get observers() {
     return [
-      '__tokenChanged(token)',
+      '__tokenChanged(token, _scriptDependencyLoaded)',
       '__tx(tx.splices)'
     ]
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+
+    socketIOScript.onload = () => {
+      this.set('_scriptDependencyLoaded', true);
+    }
+    socketIOScript.onerror = () => {
+      this.set('connected', false);
+      this.dispatchEvent(new CustomEvent('error', {detail: new Error('Failed to load Socket IO Library'), bubbles: true, composed: true}));
+    }
+  }
+
   __tokenChanged() {
     const token = this.get('token');
-    if (!token) {
+    const scriptDependencyLoaded = this.get('_scriptDependencyLoaded');
+    if (!token || !scriptDependencyLoaded) {
       // io.disconnect();
       return;
     }
