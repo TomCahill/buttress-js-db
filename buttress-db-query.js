@@ -270,6 +270,9 @@ class ButtressDbQuery extends PolymerElement {
     let valueA = pathValueA[0];
     let valueB = pathValueB[0];
 
+    if (sortType === 'numeric') {
+      return (sortOrder === 'ASC') ? valueA - valueB : valueB - valueA;
+    }
     if (sortType === 'string') {
       valueA = (valueA) ? valueA.toLowerCase(): '';
       valueB = (valueB) ? valueB.toLowerCase(): '';
