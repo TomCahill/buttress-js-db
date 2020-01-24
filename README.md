@@ -1,6 +1,6 @@
 ## &lt;buttress-db&gt;
 
-### Version: 2.1.6
+### Version: 3.0.0
 
 A set of elements enabling realtime data handling from ButtressJS
 
@@ -10,16 +10,21 @@ Sample use:
 <buttress-db
   endpoint="endpoint.example.com",
   app-id="[[publicAppId]]",
+  api-path="[[ApiPath]]",
   user-id="[[AuthedUserId]]",
   token="[[AuthedUserToken]]",
   loaded="{{dbLoaded}}",
-  db="{{db}}">
+  error="{{dbError}}",
+  settings="{{dbSettings}}",
+  db="{{db}}",
+  io="{{io}}",
+  core-collections="[[dbCoreCollections]]">
 </buttress-db>
 ```
 
 ## TODO
 * ~~Publish to npm~~
-* Move away from bower
-* Check compatibility with Polymer 3
+* ~~Move away from bower~~
+* ~~Check compatibility with Polymer 3~~
 * Update to use lit-element
 * Write TESTS!1!!!
