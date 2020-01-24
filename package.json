@@ -1,7 +1,7 @@
 {
-  "name": "buttress-js-db",
+  "name": "@buttress/buttress-db",
   "description": "A set of elements enabling realtime data handling from ButtressJS",
-  "version": "2.1.6",
+  "version": "3.0.0-pre6",
   "author": "Lighten",
   "contributors": [
     "Chris Bates-Keegan <chris@wearelighten.co.uk>",
@@ -16,5 +16,12 @@
   "bugs": {
     "url": "https://github.com/wearelighten/buttress-js-db/issues"
   },
-  "main": "buttress-db.html"
+  "main": "buttress-db.js",
+  "dependencies": {
+    "@polymer/polymer": "^3.3.1",
+    "@polymer/iron-ajax": "^3.0.1",
+    "socket.io-client": "2.3.0",
+    "sugar": "2.0.6",
+    "fingerprintjs2": "2.1.0"
+  }
 }
