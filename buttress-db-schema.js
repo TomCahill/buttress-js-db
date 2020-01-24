@@ -1,3 +1,5 @@
+import { get as getPath } from '@polymer/polymer/lib/utils/path.js';
+
 const AppDb = {
   Schema: {
     schema: [],
@@ -10,7 +12,7 @@ const AppDb = {
       return path.split('.').reduce((out, path) => {
         if (!out) return false; // Skip all paths if we hit a false
 
-        const property = Polymer.Base.get(path, out.properties);
+        const property = getPath(out.properties, path);
         if (!property) {
           return false;
         }
