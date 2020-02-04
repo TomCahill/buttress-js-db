@@ -289,7 +289,8 @@ class ButtressDbQuery extends PolymerElement {
   }
 
   __parsePath(obj, path) {
-    return [getPath(obj, path)];
+    const value = getPath(obj, path);
+    return Array.isArray(value) ? value : [value];
   }
 
   __executeQuery(data, field, operator, operand) {
