@@ -1,5 +1,7 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
+import { AppDb } from './buttress-db-schema.js';
+
 import '@polymer/iron-ajax/iron-ajax.js';
 
 class ButtressDbDataService extends PolymerElement {
@@ -42,8 +44,6 @@ class ButtressDbDataService extends PolymerElement {
         type: Boolean,
         value: false
       },
-
-      fingerPrint: Object,
 
       core: {
         type: Boolean,
@@ -139,7 +139,7 @@ class ButtressDbDataService extends PolymerElement {
       let o = i.object[i.index];
       if (i.addedCount > 0) {
         if (!o.__readonly__) {
-          o.id = this.genObjectId(); // don't trigger a notification
+          o.id = AppDb.Factory.getObjectId(); // don't trigger a notification
           this.__generateAddRequest(o);
         } else {
           delete o.__readonly__;
@@ -223,7 +223,7 @@ class ButtressDbDataService extends PolymerElement {
           path.splice(-1,1);
           // if (this.get('logging')) console.log('Update request', entity.id, path.join('.'), cr.value);
           if (typeof o === 'object') {
-            o.id = this.genObjectId();
+            o.id = AppDb.Factory.getObjectId();
           }
           this.__generateUpdateRequest(entity.id, path.join('.'), o);
         } else if (i.removed.length > 0){
@@ -368,7 +368,7 @@ class ButtressDbDataService extends PolymerElement {
       cr.value.indexSplices.forEach(sp => {
         if (!sp.addedCount) return;
         if (typeof sp.object[sp.index] === 'object') {
-          sp.object[sp.index].id = this.genObjectId();
+          sp.object[sp.index].id = AppDb.Factory.getObjectId();
         }
       });
       if (this.get('logging')) console.log(base);
@@ -617,53 +617,6 @@ class ButtressDbDataService extends PolymerElement {
         }
       }
     });
-  }
-
-  genObjectId(time) {
-    const fingerPrint = this.get('fingerPrint');
-
-    if ('number' != typeof time) {
-      time = ~~(Date.now()/1000);
-    }
-
-    const memory = new ArrayBuffer(12);
-    const buffer   = new Uint8Array(memory);
-
-    this.set('fingerPrint.inc', fingerPrint.inc + 1);
-
-    if (this.get('logging')) console.log(time);
-
-    // Encode time
-    buffer[3] = time & 0xff;
-    buffer[2] = (time >> 8) & 0xff;
-    buffer[1] = (time >> 16) & 0xff;
-    buffer[0] = (time >> 24) & 0xff;
-    // Encode machine
-    buffer[6] = fingerPrint.machineId & 0xff;
-    buffer[5] = (fingerPrint.machineId >> 8) & 0xff;
-    buffer[4] = (fingerPrint.machineId >> 16) & 0xff;
-    // Encode pid
-    buffer[8] = fingerPrint.processId & 0xff;
-    buffer[7] = (fingerPrint.processId >> 8) & 0xff;
-    // Encode index
-    buffer[11] = fingerPrint.inc & 0xff;
-    buffer[10] = (fingerPrint.inc >> 8) & 0xff;
-    buffer[9] = (fingerPrint.inc >> 16) & 0xff;
-
-    if (this.get('logging')) console.log('silly', fingerPrint.inc);
-    if (this.get('logging')) console.log('silly', buffer);
-    let objectStr = '';
-
-    for (let x=0; x<12; x++) {
-      objectStr += buffer[x].toString(16).padStart(2, '0');
-    }
-
-    if (this.get('logging')) console.log('silly', objectStr);
-
-    let hexRex = new RegExp("^[0-9a-fA-F]{24}$");
-    // this.__assert(hexRex.test(objectStr));
-
-    return objectStr;
   }
 
   __computeVectorBaseUrl(endpoint, route) {
