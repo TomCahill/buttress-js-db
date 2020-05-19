@@ -1,6 +1,11 @@
 import { get as getPath } from '@polymer/polymer/lib/utils/path.js';
 
 const AppDb = {
+  Fingerpint: {
+    machineId: null,
+    processId: null,
+    inc: null
+  },
   Schema: {
     schema: [],
 
@@ -318,6 +323,52 @@ const AppDb = {
 
       return AppDb.Schema.inflate(schema, false);
     },
+    getObjectId(time) {
+      const fingerPrint = AppDb.Fingerpint;
+  
+      if ('number' != typeof time) {
+        time = ~~(Date.now()/1000);
+      }
+  
+      const memory = new ArrayBuffer(12);
+      const buffer = new Uint8Array(memory);
+  
+      AppDb.Fingerpint.inc += 1;
+  
+      console.log('silly', time);
+  
+      // Encode time
+      buffer[3] = time & 0xff;
+      buffer[2] = (time >> 8) & 0xff;
+      buffer[1] = (time >> 16) & 0xff;
+      buffer[0] = (time >> 24) & 0xff;
+      // Encode machine
+      buffer[6] = fingerPrint.machineId & 0xff;
+      buffer[5] = (fingerPrint.machineId >> 8) & 0xff;
+      buffer[4] = (fingerPrint.machineId >> 16) & 0xff;
+      // Encode pid
+      buffer[8] = fingerPrint.processId & 0xff;
+      buffer[7] = (fingerPrint.processId >> 8) & 0xff;
+      // Encode index
+      buffer[11] = fingerPrint.inc & 0xff;
+      buffer[10] = (fingerPrint.inc >> 8) & 0xff;
+      buffer[9] = (fingerPrint.inc >> 16) & 0xff;
+  
+      console.log('silly', fingerPrint.inc);
+      console.log('silly', buffer);
+      let objectStr = '';
+  
+      for (let x=0; x<12; x++) {
+        objectStr += buffer[x].toString(16).padStart(2, '0');
+      }
+  
+      console.log('silly', objectStr);
+  
+      let hexRex = new RegExp("^[0-9a-fA-F]{24}$");
+      // this.__assert(hexRex.test(objectStr));
+  
+      return objectStr;
+    },
     getPropDefault: function(config) {
       let res;
       switch (config.__type) {
@@ -338,7 +389,13 @@ const AppDb = {
           res = {};
           break;
         case 'id':
-          res = config.__default !== undefined ? config.__default : null;
+          if (config.__default && config.__default === 'new') {
+            res = AppDb.Factory.getObjectId();
+          } else if (config.__default) {
+            res = config.__default;
+          } else {
+            res = null;
+          }  
           break;
         case 'date':
           if (config.__default === null) {

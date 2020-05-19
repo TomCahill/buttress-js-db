@@ -44,7 +44,6 @@ class ButtressDb extends PolymerElement {
           loaded="{{item.loaded}}",
           status="{{item.status}}",
           data="{{item.data}}",
-          finger-print="{{__fingerPrint}}",
           metadata="{{item.metadata}}",
           priority="[[item.priority]]",
           core="[[item.core]]",
@@ -110,17 +109,6 @@ class ButtressDb extends PolymerElement {
       },
       rqSchemaParams: {
         type: Object
-      },
-
-      __fingerPrint: {
-        type: Object,
-        value: function() {
-          return {
-            machineId: null,
-            processId: null,
-            inc: null
-          }
-        }
       },
 
       dbSchema: {
@@ -248,9 +236,9 @@ class ButtressDb extends PolymerElement {
         let nibbles = murmur.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
         let id = 0;
         nibbles.forEach((n,idx) => id |= n << idx);
-        this.set('__fingerPrint.machineId', id);
-        this.set('__fingerPrint.processId', Math.floor(Math.random() * 100000) % 0xFFFF);
-        this.set('__fingerPrint.inc', Math.floor(Math.random() * 65535) % 0xFFFF);
+        AppDb.Fingerpint.machineId = id;
+        AppDb.Fingerpint.processId = Math.floor(Math.random() * 100000) % 0xFFFF;
+        AppDb.Fingerpint.inc = Math.floor(Math.random() * 65535) % 0xFFFF;
       });
     };
     fingerprintScript.onerror = () => {
