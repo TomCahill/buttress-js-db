@@ -1,7 +1,7 @@
 {
   "name": "@buttress/buttress-db",
   "description": "A set of elements for Polymer 3 enabling realtime data handling from ButtressJS",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "author": "Lighten",
   "contributors": [
     "Chris Bates-Keegan <chris@wearelighten.co.uk>",
@@ -18,7 +18,7 @@
   },
   "main": "buttress-db.js",
   "dependencies": {
-    "@polymer/polymer": "^3.3.1",
+    "@polymer/polymer": "^3.4.1",
     "@polymer/iron-ajax": "^3.0.1",
     "socket.io-client": "2.3.0",
     "sugar": "2.0.6",
