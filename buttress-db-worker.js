@@ -44,7 +44,7 @@ const Worker = () => {
         });
       };
       req.onsuccess = function() {
-        console.log('DB init');
+        // console.log('DB init');
         db = req.result;
         return resolve(true);
       };
@@ -74,7 +74,7 @@ const Worker = () => {
   const __clear = (payload) => {
     if (!db) return Promise.reject('DB isn\'t init');
 
-    console.log('__clear', payload.collection);
+    // console.log('__clear', payload.collection);
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(payload.collection, 'readwrite');
@@ -94,7 +94,7 @@ const Worker = () => {
 
     if (!payload.items) return Promise.reject('Items not part of bulk write payload');
 
-    console.log('__bulkWrite', payload.collection, payload.items.length);
+    // console.log('__bulkWrite', payload.collection, payload.items.length);
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(payload.collection, 'readwrite');
