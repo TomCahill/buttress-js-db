@@ -335,7 +335,7 @@ const AppDb = {
   
       AppDb.Fingerpint.inc += 1;
   
-      console.log('silly', time);
+      // console.log('silly', time);
   
       // Encode time
       buffer[3] = time & 0xff;
@@ -354,15 +354,15 @@ const AppDb = {
       buffer[10] = (fingerPrint.inc >> 8) & 0xff;
       buffer[9] = (fingerPrint.inc >> 16) & 0xff;
   
-      console.log('silly', fingerPrint.inc);
-      console.log('silly', buffer);
+      // console.log('silly', fingerPrint.inc);
+      // console.log('silly', buffer);
       let objectStr = '';
   
       for (let x=0; x<12; x++) {
         objectStr += buffer[x].toString(16).padStart(2, '0');
       }
   
-      console.log('silly', objectStr);
+      // console.log('silly', objectStr);
   
       let hexRex = new RegExp("^[0-9a-fA-F]{24}$");
       // this.__assert(hexRex.test(objectStr));
