@@ -175,7 +175,7 @@ class ButtressDbRealtimeHandler extends PolymerElement {
 
 
   __handlePostCommon(path, params, payload) {
-    if (path.length !== 1) {
+    if (path.length > 1 && !path.includes('bulk')) {
       return;
     }
 
