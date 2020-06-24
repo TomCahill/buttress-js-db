@@ -44,7 +44,6 @@ class ButtressDb extends PolymerElement {
           loaded="{{item.loaded}}",
           status="{{item.status}}",
           data="{{item.data}}",
-          metadata="{{item.metadata}}",
           priority="[[item.priority]]",
           core="[[item.core]]",
           logging="[[logging]]",
@@ -123,7 +122,6 @@ class ButtressDb extends PolymerElement {
           // post: {
           //   status: 'uninitialised',
           //   data: [],
-          //   metadata: {}
           // }
           return {};
         },
@@ -338,8 +336,7 @@ class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: true,
-        metadata: {}
+        core: true
       }) - 1;
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
@@ -353,8 +350,7 @@ class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: false,
-        metadata: {}
+        core: false
       }) - 1;
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);

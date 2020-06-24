@@ -132,12 +132,7 @@ class ButtressDbRealtimeHandler extends PolymerElement {
 
     switch (payload.verb) {
       case 'post': {
-        if (payload.path.includes('metadata') && params.id && params.key) {
-          this.__handleMetadataPost(path, params, payload);
-        } else {
-          this.__handlePostCommon(path, params, payload);
-        }
-
+        this.__handlePostCommon(path, params, payload);
       } break;
       case 'put': {
         for (let x=0; x<payload.response.length; x++) {
@@ -157,22 +152,6 @@ class ButtressDbRealtimeHandler extends PolymerElement {
       } break;
     }
   }
-
-  __handleMetadataPost(path, params, payload) {
-    if (this.get('logging')) console.log('silly', '__handleMetadataPost', path[0], params, payload.response.value);
-    let metadata = this.get(['db', path[0], 'metadata', params.id]);
-    let metadataRoot = this.get(['db', path[0], 'metadata']);
-
-    if (!metadata) {
-      if (this.get('logging')) console.log('warn', 'ignoring metadata update, not already loaded');
-      return;
-    }
-    if (this.get('logging')) console.log('silly', 'metadata', metadata);
-
-    metadataRoot.__readOnlyChange__ = true;
-    this.set(['db', path[0], 'metadata', params.id, params.key], payload.response.value);
-  }
-
 
   __handlePostCommon(path, params, payload) {
     if (path.length > 1 && !path.includes('bulk')) {
