@@ -16,12 +16,27 @@
   "bugs": {
     "url": "https://github.com/wearelighten/buttress-js-db/issues"
   },
+  "scripts": {
+    "start": "polymer serve",
+    "build": "polymer build",
+    "lint": "polymer lint",
+    "test": "polymer test --npm --module-resolution=node",
+    "test:integration": "polymer build # test that psk builds without error with the CLI"
+  },
   "main": "buttress-db.js",
   "dependencies": {
-    "@polymer/polymer": "^3.4.1",
     "@polymer/iron-ajax": "^3.0.1",
+    "@polymer/polymer": "^3.4.1",
+    "fingerprintjs2": "2.1.0",
     "socket.io-client": "2.3.0",
-    "sugar": "2.0.6",
-    "fingerprintjs2": "2.1.0"
+    "sugar": "2.0.6"
+  },
+  "devDependencies": {
+    "@webcomponents/webcomponentsjs": "^2.0.0",
+    "polymer-cli": "^1.7.1",
+    "wct-browser-legacy": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=8.0"
   }
 }
