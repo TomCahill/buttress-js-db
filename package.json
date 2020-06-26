@@ -25,14 +25,13 @@
   },
   "main": "buttress-db.js",
   "dependencies": {
-    "@polymer/iron-ajax": "^3.0.1",
     "@polymer/polymer": "^3.4.1",
+    "@polymer/iron-ajax": "^3.0.1",
     "sugar": "2.0.6"
   },
   "devDependencies": {
-    "@webcomponents/webcomponentsjs": "^2.0.0",
-    "polymer-cli": "^1.7.1",
-    "wct-browser-legacy": "^1.0.0"
+    "@webcomponents/webcomponentsjs": "^2.4.3",
+    "wct-browser-legacy": "^1.0.2"
   },
   "engines": {
     "node": ">=8.0"
