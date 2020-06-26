@@ -1,8 +1,6 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
-const socketIOScript = document.createElement('script');
-socketIOScript.setAttribute('src', 'node_modules/socket.io-client/dist/socket.io.js');
-document.head.appendChild(socketIOScript);
+import './libs/socket.io';
 
 class ButtressDbSocketIo extends PolymerElement {
   static get is() { return 'buttress-db-socket-io'; }
@@ -70,10 +68,9 @@ class ButtressDbSocketIo extends PolymerElement {
   connectedCallback() {
     super.connectedCallback();
 
-    socketIOScript.onload = () => {
+    if (io) {
       this.set('_scriptDependencyLoaded', true);
-    }
-    socketIOScript.onerror = () => {
+    } else {
       this.set('connected', false);
       this.dispatchEvent(new CustomEvent('error', {detail: new Error('Failed to load Socket IO Library'), bubbles: true, composed: true}));
     }

@@ -27,8 +27,6 @@
   "dependencies": {
     "@polymer/iron-ajax": "^3.0.1",
     "@polymer/polymer": "^3.4.1",
-    "fingerprintjs2": "2.1.0",
-    "socket.io-client": "2.3.0",
     "sugar": "2.0.6"
   },
   "devDependencies": {
