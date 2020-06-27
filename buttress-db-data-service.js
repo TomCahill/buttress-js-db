@@ -4,7 +4,7 @@ import { AppDb } from './buttress-db-schema.js';
 
 import '@polymer/iron-ajax/iron-ajax.js';
 
-class ButtressDbDataService extends PolymerElement {
+export class ButtressDbDataService extends PolymerElement {
   static get is() { return 'buttress-db-data-service'; }
 
   static get template() {

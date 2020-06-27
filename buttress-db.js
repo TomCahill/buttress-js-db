@@ -12,7 +12,7 @@ import Worker from './buttress-db-worker';
 
 import 'sugar/dist/sugar';
 
-class ButtressDb extends PolymerElement {
+export class ButtressDb extends PolymerElement {
   static get is() { return 'buttress-db'; }
 
   static get template() {

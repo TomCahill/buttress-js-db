@@ -2,7 +2,7 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
 import './buttress-db-socket-io.js';
 
-class ButtressDbRealtimeHandler extends PolymerElement {
+export class ButtressDbRealtimeHandler extends PolymerElement {
   static get is() { return 'buttress-db-realtime-handler'; }
 
   static get template() {
