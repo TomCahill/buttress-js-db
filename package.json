@@ -17,11 +17,10 @@
     "url": "https://github.com/wearelighten/buttress-js-db/issues"
   },
   "scripts": {
-    "start": "polymer serve",
-    "build": "polymer build",
-    "lint": "polymer lint",
-    "test": "polymer test --npm --module-resolution=node",
-    "test:integration": "polymer build # test that psk builds without error with the CLI"
+    "lint": "eslint '**/*.js'",
+    "test": "karma start karma.conf.cjs",
+    "test:watch": "karma start karma.conf.cjs --auto-watch=true --single-run=false",
+    "start": "es-dev-server --app-index demo/index.html --node-resolve --open --watch"
   },
   "main": "buttress-db.js",
   "dependencies": {
@@ -30,8 +29,18 @@
     "sugar": "2.0.6"
   },
   "devDependencies": {
+    "@open-wc/testing": "^2.5.18",
+    "@open-wc/testing-karma": "^3.4.6",
     "@webcomponents/webcomponentsjs": "^2.4.3",
-    "wct-browser-legacy": "^1.0.2"
+    "babel-eslint": "^10.1.0",
+    "chai": "^4.2.0",
+    "deepmerge": "^4.2.2",
+    "es-dev-server": "^1.56.0",
+    "eslint": "^7.3.1",
+    "karma": "^5.1.0",
+    "karma-chai": "^0.1.0",
+    "karma-mocha": "^2.0.1",
+    "mocha": "^8.0.1"
   },
   "engines": {
     "node": ">=8.0"
