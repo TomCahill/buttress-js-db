@@ -77,7 +77,8 @@ class ButtressDb extends PolymerElement {
 
       loaded: {
         type: Boolean,
-        notify: true
+        notify: true,
+        value: false
       },
       loading: {
         type: Object,
@@ -93,7 +94,8 @@ class ButtressDb extends PolymerElement {
       },
       error: {
         type: Boolean,
-        notify: true
+        notify: true,
+        value: false
       },
       lastError: {
         type: Object,
