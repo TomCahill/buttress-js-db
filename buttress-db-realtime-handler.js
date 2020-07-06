@@ -140,7 +140,11 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
         }
       } break;
       case 'delete': {
-        if (path.length === 2 && params.id) {
+        if (path.length === 1) {
+          let data = this.get(['db', path[0], 'data']);
+          data.forEach((item) => item.__readonly__ = true);
+          this.splice(['db', path[0], 'data'], 0, data.length);
+        } else if (path.length === 2 && params.id) {
           let data = this.get(['db', path[0], 'data']);
           let itemIndex = data.findIndex(d => d.id === params.id);
           if (itemIndex !== -1) {
