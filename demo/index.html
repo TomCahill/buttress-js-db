@@ -3,12 +3,125 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+    
+    <script src="../node_modules/@webcomponents/webcomponentsjs/webcomponents-bundle.js"></script>
 
     <title>buttress-db demo</title>
   </head>
   <body>
-    <div class="vertical-section-container centered">
-      <h3>Basic buttress-db demo</h3>
-    </div>
+    <buttress-demo-element></buttress-demo-element>
+
+    <script type="module">
+      import {PolymerElement, html} from '@polymer/polymer/polymer-element.js';
+      import '@polymer/polymer/lib/elements/dom-repeat.js';
+      import '../buttress-db.js';
+
+      class DemoElement extends PolymerElement {
+        static get is() { return `buttress-demo-element`; }
+        static get properties () {
+          return {
+            token: String,
+            tokens: {
+              type: Array,
+              value: function() {
+                return [
+                  {
+                    "value" : "JdE4lkdltlsZg0RlJZM1IVVIIckhosEQB5Bg",
+                    "role" : "public"
+                  },
+                  {
+                    "value" : "1ZZccZYI0QM5hQtpxsEll0ZpcJURA915x9ZR",
+                    "role" : "user.member"
+                  },
+                  {
+                    "value" : "oN5cRF8QA1dggdhEIpwt5pYV05d4h90glAcZ",
+                    "role" : "admin.super"
+                  },
+                  {
+                    "value" : "gU0gtVM9pNApktQwUw8REV8FtsFMJx9hYkUA",
+                    "role" : "public"
+                  },
+                  {
+                    "value" : "MlUkElY0s05QlhldpN4osNpRxtZ1UIkVlhg9",
+                    "role" : "admin.super"
+                  },
+                  {
+                    "value" : "9ct4h1oMUIVwUgwZYIcdR0sxZIVZJNJVARgo",
+                    "role" : "user.member"
+                  }
+                ]
+              }
+            },
+            dbLoaded: Boolean,
+            dbLoading: Object,
+            dbError: Boolean,
+            dbSettings: Object,
+            db: Object,
+            io: Object,
+          };
+        }
+        static get template() {
+          return html`
+            <style>
+              .props {
+                margin: 0;
+                background-color: #f5f5f5;
+                font-size: 1rem 0.5rem;
+                padding: 20px;
+              }
+              .props .prop {
+                margin-left: 0.5rem;
+              }
+            </style>
+            <buttress-db
+              id="bjs"
+              endpoint="http://test.buttressjs.com",
+              app-id="45tRsh1R0Vo80ANAAJEs8gFB5NNk4A14",
+              api-path="bjs",
+              user-id="1",
+              token="[[token]]",
+              loaded="{{dbLoaded}}",
+              loading="{{dbLoading}}",
+              error="{{dbError}}",
+              settings="{{dbSettings}}",
+              db="{{db}}",
+              io="{{io}}",
+              logging
+            ></buttress-db>
+            <select id="selectToken" on-change="_changeToken">
+              <template is="dom-repeat" items="[[tokens]]">
+                <option value="[[item.value]]">[[item.role]]</option>
+              </template>
+            </select>
+            <div class="vertical-section-container centered">
+              <h1>Basic buttress-db demo: [[token]]</h1>
+              <h3>Properties</h3>
+              <div class="props">
+                <pre class="prop"><b>loaded</b>: [[dbLoaded]]</pre>
+                <pre class="prop"><b>loading</b>: [[stringify(dbLoading, dbLoading.*)]]</pre>
+                <pre class="prop"><b>error</b>: [[dbError]]</pre>
+                <pre class="prop"><b>settings</b>: [[stringify(dbSettings, dbSettings.*)]]</pre>
+                <pre class="prop"><b>db</b>: [[stringify(db, db.*)]]</pre>
+                <pre class="prop"><b>io</b>: [[stringify(io, io.*)]]</pre>
+              </pre>
+            </div>
+          `;
+        }
+        ready() {
+          super.ready();
+          if (window.localStorage.getItem('token')) {
+            this.set('token', window.localStorage.getItem('token'));
+          }
+        }
+        _changeToken(ev) {
+          this.set('token', this.$.selectToken.value);
+          localStorage.setItem('token', this.$.selectToken.value);
+        }
+        stringify(object) {
+          return JSON.stringify(object, null, 4);
+        }
+      }
+      customElements.define(DemoElement.is, DemoElement);
+    </script>
   </body>
 </html>

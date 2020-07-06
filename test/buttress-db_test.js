@@ -6,11 +6,11 @@ const assert = chai.assert;
 
 suite('buttress-db', async () => {
 
-  const Schema = 'board';
+  const Schema = 'post';
 
   let entityId = null;
-  const entityOriginalName = `Test Board Original ${Math.floor(Math.random() * 999) + 1}`;
-  const entityNewName = `Test Board Modified ${Math.floor(Math.random() * 999) + 1}`;
+  const entityOriginalContent = `Test Post Original ${Math.floor(Math.random() * 999) + 1}`;
+  const entityNewContent = `Test Post Modified ${Math.floor(Math.random() * 999) + 1}`;
 
   const element = /** @type {ButtressDb} */ (await fixture(html`
     <buttress-db
@@ -28,70 +28,71 @@ suite('buttress-db', async () => {
 
   test('should connect to buttress', async () => {
     await waitUntil(() => element.loaded, `Slow load or unable to connect to Buttress ${element.endpoint}`);
+    await waitUntil(() => element.io.connected, `Unable to connected to socket ${element.endpoint}`);
   });
 
   test(`should add a new ${Schema} to the ${Schema}s collection`, async() => {
     const entity = AppDb.Factory.create(`${Schema}s`);
-    entity.name = entityOriginalName;
+    entity.content = entityOriginalContent;
 
     // Check the initial state of the data service
-    assert.equal(element.db.board.status, 'done');
+    assert.equal(element.db.post.status, 'done');
 
     // Get the current array length & Push the new element
-    const collectionLength = element.db.board.data.length;
-    element.push(`db.board.data`, entity);
+    const collectionLength = element.db.post.data.length;
+    element.push(`db.post.data`, entity);
 
     // Check and wait for the data service state to go back to done
-    assert.equal(element.db.board.status, 'working');
-    await waitUntil(() => element.db.board.status === 'done');
+    assert.equal(element.db.post.status, 'working');
+    await waitUntil(() => element.db.post.status === 'done');
 
-    // The newly created board should now have an id
-    assert.exists(entity.id, 'board doesn\'t have an id');
+    // The newly created post should now have an id
+    assert.exists(entity.id, 'post doesn\'t have an id');
     entityId = entity.id;
 
     // Check the length of the data service
-    assert.lengthOf(element.db.board.data, collectionLength + 1);
+    assert.lengthOf(element.db.post.data, collectionLength + 1);
   });
 
   test(`should find & edit a Schema`, async() => {
     // Find the entity we created in the collection
-    const entityIdx = element.db.board.data.findIndex((b) => b.id === entityId);
-    assert.isAbove(entityIdx, -1, `Unable to find board with id ${entityId}'`);
+    const entityIdx = element.db.post.data.findIndex((b) => b.id === entityId);
+    assert.isAbove(entityIdx, -1, `Unable to find post with id ${entityId}'`);
     
-    // Double check the name
-    assert.equal(element.db.board.data[entityIdx].name, entityOriginalName);
+    // Double check the content
+    assert.equal(element.db.post.data[entityIdx].content, entityOriginalContent);
 
     // Check the initial state of the data service
-    assert.equal(element.db.board.status, 'done');
+    assert.equal(element.db.post.status, 'done');
 
     // // Get the current array length & Push the new element
-    element.set(`db.board.data.${entityIdx}.name`, entityNewName);
+    element.set(`db.post.data.${entityIdx}.content`, entityNewContent);
 
     // Check and wait for the data service state to go back to done
-    assert.equal(element.db.board.status, 'working');
-    await waitUntil(() => element.db.board.status === 'done');
+    assert.equal(element.db.post.status, 'working');
+    await waitUntil(() => element.db.post.status === 'done');
 
-    // Check the name of the board
-    assert.equal(element.db.board.data[entityIdx].name, entityNewName);
+    // Check the content of the post
+    assert.equal(element.db.post.data[entityIdx].content, entityNewContent);
   });
 
   test(`should remove a ${Schema} from the collection`, async() => {
-    // Find the board we created in the collection
-    const entityIdx = element.db.board.data.findIndex((b) => b.id === entityId);
-    assert.isAbove(entityIdx, -1, `Unable to find board with id ${entityId}'`);
+    // Find the post we created in the collection
+    const entityIdx = element.db.post.data.findIndex((b) => b.id === entityId);
+    assert.isAbove(entityIdx, -1, `Unable to find post with id ${entityId}'`);
 
     // Check the initial state of the data service
-    assert.equal(element.db.board.status, 'done');
+    assert.equal(element.db.post.status, 'done');
 
     // Get the current array length & Push the new element
-    const collectionLength = element.db.board.data.length;
-    element.splice(`db.board.data`, entityIdx, 1);
+    const collectionLength = element.db.post.data.length;
+    element.splice(`db.post.data`, entityIdx, 1);
 
     // Check and wait for the data service state to go back to done
-    assert.equal(element.db.board.status, 'working');
-    await waitUntil(() => element.db.board.status === 'done');
+    assert.equal(element.db.post.status, 'working');
+    await waitUntil(() => element.db.post.status === 'done');
 
     // Check the length of the data service
-    assert.lengthOf(element.db.board.data, collectionLength - 1);
+    assert.lengthOf(element.db.post.data, collectionLength - 1);
   });
 });
