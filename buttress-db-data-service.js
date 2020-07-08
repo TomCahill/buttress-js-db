@@ -4,7 +4,7 @@ import { AppDb } from './buttress-db-schema.js';
 
 import '@polymer/iron-ajax/iron-ajax.js';
 
-class ButtressDbDataService extends PolymerElement {
+export class ButtressDbDataService extends PolymerElement {
   static get is() { return 'buttress-db-data-service'; }
 
   static get template() {
@@ -69,11 +69,6 @@ class ButtressDbDataService extends PolymerElement {
         value: function() { return []; },
         notify: true
       },
-      metadata: {
-        type: Object,
-        value: function() { return {}; },
-        notify: true
-      },
       liveData: {
         type: Array,
         value: []
@@ -111,8 +106,7 @@ class ButtressDbDataService extends PolymerElement {
   static get observers() {
     return [
       '__dataSplices(data.splices)',
-      '__dataChanges(data.*)',
-      '__metadataChanged(metadata.*)',
+      '__dataChanges(data.*)'
     ];
   }
 
@@ -316,109 +310,6 @@ class ButtressDbDataService extends PolymerElement {
     }
   }
 
-  __metadataChanged(cr) {
-    if (this.__internalChange__) {
-      if (this.get('logging')) console.log(`Ignoring internal metadata change: ${cr.path}`);
-      delete this.__internalChange__;
-      return;
-    }
-
-    if (/\.length$/.test(cr.path) === true
-      || this.readOnly) {
-      if (this.get('logging')) console.log('Ignoring .length or readOnly change');
-      return;
-    }
-
-    // ignore paths with fields with __ as prefix and suffix
-    let matches = /^metadata.([0-9a-fA-F]+)/.exec(cr.path);
-    if (!matches) {
-      if (this.get('logging')) console.log(`Ignoring invalid metadata path: ${cr.path}`);
-      return;
-    }
-    let entityId = matches[1];
-    if (this.get('logging')) console.log('__metadataChange', cr);
-    if (cr.base.__readOnlyChange__) {
-      delete cr.base.__readOnlyChange__;
-      if (this.get('logging')) console.log(`Ignoring read only change`);
-      return;
-    }
-
-    if (cr.value.__populate__) {
-      if (this.get('logging')) console.log(`Populating metadata for ${entityId}`);
-      delete cr.value.__populate__;
-      this.__generateMetadataGetAllRequest(entityId, cr.value);
-      return;
-    }
-
-    // ignore paths with fields with __ as prefix and suffix
-    if (/__(\w+)__/.test(cr.path)) {
-      if (this.get('logging')) console.log(`Ignoring internal change: ${cr.path}`);
-      return;
-    }
-
-    this.__info('__metadataChanged', cr);
-    let path = cr.path.split('.');
-    // Is this an array mutation?
-    if (/\.splices$/.test(cr.path) === true) {
-      let remotePath = path.concat();
-      remotePath.splice(-1,1);
-      let base = this.get(remotePath);
-      remotePath.splice(0,2);
-
-      cr.value.indexSplices.forEach(sp => {
-        if (!sp.addedCount) return;
-        if (typeof sp.object[sp.index] === 'object') {
-          sp.object[sp.index].id = AppDb.Factory.getObjectId();
-        }
-      });
-      if (this.get('logging')) console.log(base);
-
-      this.__assert(remotePath.length === 1); // Metadata doesn't support remote paths
-      this.__generateMetadataUpdateRequest(entityId, remotePath.join('.'), base);
-    } else {
-      let value = cr.value;
-      if (path.length > 3) {
-        path = path.splice(0, 3);
-        value = this.get(path);
-      }
-      path.splice(0,2);
-
-      this.__assert(path.length === 1); // Metadata doesn't support remote paths
-      this.__generateMetadataUpdateRequest(entityId, path[0], value);
-    }
-  }
-
-  __generateMetadataGetAllRequest(entityId, defaults) {
-    this.rqEntityId = entityId;
-    let request = {
-      type: 'list-metadata',
-      url: `${this.scalarBaseUrl}/metadata`,
-      entityId: this.rqEntityId,
-      method: 'GET',
-      contentType: '',
-      body: {},
-      defaults: defaults
-    };
-
-    this.__queueRequest(request);
-  }
-
-  __generateMetadataUpdateRequest(entityId, key, value) {
-    this.rqEntityId = entityId;
-    let request = {
-      type: 'update-metadata',
-      url: `${this.scalarBaseUrl}/metadata/${key}`,
-      entityId: this.rqEntityId,
-      method: 'POST',
-      contentType: 'application/json',
-      body: {
-        value: JSON.stringify(value)
-      }
-    };
-
-    this.__queueRequest(request);
-  }
-
   __generateListRequest() {
     this.rqEntityId = -1;
     let request = {
@@ -530,9 +421,6 @@ class ButtressDbDataService extends PolymerElement {
       case 'list':
         this.__ajaxListResponse(rq);
         break;
-      case 'list-metadata':
-        this.__ajaxListMetadataResponse(rq);
-        break;
       // case 'update': {
       //   this.__ajaxUpdateResponse(rq);
       // } break;
@@ -554,20 +442,6 @@ class ButtressDbDataService extends PolymerElement {
     this.data = this.liveData = rq.response;
     this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
     this.set('loaded', true);
-  }
-  __ajaxListMetadataResponse(rq) {
-    // this.set(['metadata',rq.entityId], rq.response);
-    for (let field in rq.defaults) {
-      if (!Object.prototype.hasOwnProperty.call(rq.defaults, field)) {
-        continue;
-      }
-      this.__internalChange__ = true;
-      if (rq.response[field]) {
-        this.set(['metadata', rq.entityId, field], rq.response[field]);
-      } else {
-        this.set(['metadata', rq.entityId, field], rq.defaults[field]);
-      }
-    }
   }
 
   __ajaxAddResponse(rq) {

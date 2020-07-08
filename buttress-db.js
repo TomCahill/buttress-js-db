@@ -1,20 +1,18 @@
-import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
+import { PolymerElement, html } from '@polymer/polymer/polymer-element';
 
-import '@polymer/iron-ajax/iron-ajax.js';
+import '@polymer/iron-ajax/iron-ajax';
 
-import './buttress-db-data-service.js';
-import './buttress-db-realtime-handler.js';
+import './buttress-db-data-service';
+import './buttress-db-realtime-handler';
 
-import { AppDb } from './buttress-db-schema.js';
-import Worker from './buttress-db-worker.js';
+import './libs/fingerprint2';
+
+import { AppDb } from './buttress-db-schema';
+import Worker from './buttress-db-worker';
 
 import 'sugar/dist/sugar';
 
-const fingerprintScript = document.createElement('script');
-fingerprintScript.setAttribute('src', 'node_modules/fingerprintjs2/dist/fingerprint2.min.js');
-document.head.appendChild(fingerprintScript);
-
-class ButtressDb extends PolymerElement {
+export class ButtressDb extends PolymerElement {
   static get is() { return 'buttress-db'; }
 
   static get template() {
@@ -44,7 +42,6 @@ class ButtressDb extends PolymerElement {
           loaded="{{item.loaded}}",
           status="{{item.status}}",
           data="{{item.data}}",
-          metadata="{{item.metadata}}",
           priority="[[item.priority]]",
           core="[[item.core]]",
           logging="[[logging]]",
@@ -80,7 +77,8 @@ class ButtressDb extends PolymerElement {
 
       loaded: {
         type: Boolean,
-        notify: true
+        notify: true,
+        value: false
       },
       loading: {
         type: Object,
@@ -96,7 +94,8 @@ class ButtressDb extends PolymerElement {
       },
       error: {
         type: Boolean,
-        notify: true
+        notify: true,
+        value: false
       },
       lastError: {
         type: Object,
@@ -123,7 +122,6 @@ class ButtressDb extends PolymerElement {
           // post: {
           //   status: 'uninitialised',
           //   data: [],
-          //   metadata: {}
           // }
           return {};
         },
@@ -226,7 +224,7 @@ class ButtressDb extends PolymerElement {
     super.connectedCallback();
     const settings = this.get('settings');
 
-    fingerprintScript.onload = () => {
+    if (Fingerprint2) {
       const depIdx = this.get('nonModuleDependencies').findIndex(d => d.name === 'fingerprint');
       this.set(`nonModuleDependencies.${depIdx}.loaded`, true);
 
@@ -240,13 +238,13 @@ class ButtressDb extends PolymerElement {
         AppDb.Fingerpint.processId = Math.floor(Math.random() * 100000) % 0xFFFF;
         AppDb.Fingerpint.inc = Math.floor(Math.random() * 65535) % 0xFFFF;
       });
-    };
-    fingerprintScript.onerror = () => {
+    } else {
       const depIdx = this.get('nonModuleDependencies').findIndex(d => d.name === 'fingerprint');
       this.set(`nonModuleDependencies.${depIdx}.error`, true);
       this.set('error', true);
       this.set('lastError', new Error('Unable to load fingerprint, this is required for generating ids'));
-    };
+      return;
+    }
 
     this.set('db.Factory', AppDb.Factory);
 
@@ -338,8 +336,7 @@ class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: true,
-        metadata: {}
+        core: true
       }) - 1;
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
@@ -353,8 +350,7 @@ class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: false,
-        metadata: {}
+        core: false
       }) - 1;
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
