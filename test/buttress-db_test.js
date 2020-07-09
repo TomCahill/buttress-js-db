@@ -1,5 +1,5 @@
-import {ButtressDb} from '../buttress-db';
-import {AppDb} from '../buttress-db-schema';
+import {ButtressDb} from '../buttress-db.js';
+import {AppDb} from '../buttress-db-schema.js';
 import {fixture, html, waitUntil} from '@open-wc/testing';
 
 const assert = chai.assert;

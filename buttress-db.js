@@ -2,13 +2,13 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element';
 
 import '@polymer/iron-ajax/iron-ajax';
 
-import './buttress-db-data-service';
-import './buttress-db-realtime-handler';
+import './buttress-db-data-service.js';
+import './buttress-db-realtime-handler.js';
 
-import './libs/fingerprint2';
+import './libs/fingerprint2.js';
 
-import { AppDb } from './buttress-db-schema';
-import Worker from './buttress-db-worker';
+import { AppDb } from './buttress-db-schema.js';
+import Worker from './buttress-db-worker.js';
 
 import 'sugar/dist/sugar';
 
