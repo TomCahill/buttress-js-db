@@ -1,6 +1,6 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
-import './libs/socket.io';
+import './libs/socket.io.js';
 
 export class ButtressDbSocketIo extends PolymerElement {
   static get is() { return 'buttress-db-socket-io'; }
