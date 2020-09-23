@@ -133,7 +133,9 @@ export class ButtressDbDataService extends PolymerElement {
       let o = i.object[i.index];
       if (i.addedCount > 0) {
         if (!o.__readonly__) {
-          o.id = AppDb.Factory.getObjectId(); // don't trigger a notification
+          if (!o.id) {
+            o.id = AppDb.Factory.getObjectId(); // don't trigger a notification
+          }
           this.__generateAddRequest(o);
         } else {
           delete o.__readonly__;
@@ -216,7 +218,7 @@ export class ButtressDbDataService extends PolymerElement {
           path.splice(0,2);
           path.splice(-1,1);
           // if (this.get('logging')) console.log('Update request', entity.id, path.join('.'), cr.value);
-          if (typeof o === 'object') {
+          if (typeof o === 'object' && !o.id) {
             o.id = AppDb.Factory.getObjectId();
           }
           this.__generateUpdateRequest(entity.id, path.join('.'), o);

@@ -167,10 +167,18 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
       responses = [responses];
     }
 
+    const data = this.get(['db', path[0], 'data']);
+
     responses.forEach((response) => {
       if (!response.__readonly__) {
         response.__readonly__ = true;
       }
+
+      const entityIdx = data.findIndex((e) => e.id === response.id);
+      if (entityIdx !== -1) {
+        return;
+      }
+
       this.push(['db', path[0], 'data'], response);
     })
   }
@@ -190,7 +198,17 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
       return false;
     }
 
-    return ['db', path[0], 'data', entityIdx, response.path];
+    let tail = [];
+
+    if (response && response.path) {
+      tail = response.path.split('.');
+ 
+      if (tail.indexOf('__increment__') !== -1) {
+        tail.splice(tail.indexOf('__increment__'), 1);
+      }
+    }
+
+    return ['db', path[0], 'data', entityIdx].concat(tail);
   }
 
   __handlePut(path, params, payload, response) {
@@ -206,6 +224,11 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
       case 'scalar': {
         if (this.get('logging')) console.log('silly', 'updating', updatePath, response.value);
         this.set(updatePath, response.value);
+        break;
+      }
+      case 'scalar-increment': {
+        if (this.get('logging')) console.log('silly', 'updating', updatePath, response.value);
+        this.set(updatePath, this.get(updatePath) + response.value);
         break;
       }
       case 'vector-add': {

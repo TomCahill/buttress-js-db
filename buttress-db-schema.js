@@ -67,7 +67,7 @@ const AppDb = {
       return flattened;
     },
 
-    inflate: function(schema) {
+    inflate: function(schema, createId) {
       const __inflateObject = (parent, path, value) => {
         if (path.length > 1) {
           let parentKey = path.shift();
@@ -107,6 +107,14 @@ const AppDb = {
     
         res[root] = value;
       }
+
+      if (!res.id && createId) {
+        res.id = AppDb.Factory.getPropDefault({
+          __type: 'id',
+          __default: 'new'
+        });
+      }
+
       return res;
     },
 
@@ -308,7 +316,7 @@ const AppDb = {
         throw new Error(`Failed to find schema for ${collection}`);
       }
 
-      return AppDb.Schema.inflate(schema, false);
+      return AppDb.Schema.inflate(schema, true);
     },
     createFromPath: function(collectionName, path) {
       const collection = AppDb.Schema.getSchema(collectionName);
