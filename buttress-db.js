@@ -12,7 +12,57 @@ import Worker from './buttress-db-worker.js';
 
 import 'sugar/dist/sugar';
 
-export class ButtressDb extends PolymerElement {
+class ButtressInterface {
+  constructor() {
+    this._instance = null;
+  }
+
+  bind(instance) {
+    this._instance = instance;
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  getPath(...args) {
+    return this._instance.get(...args);
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  setPath(...args) {
+    return this._instance.set(...args);
+  }
+
+  /**
+   * @param {string} collection
+   * @param {string} id
+   * @return {promise} entity
+   */
+  get(collection, id) {
+    console.log(collection, id);
+    const entity = this.getPath(`db.${collection}.${id}`);
+
+    if (entity) return Promise.resolve(entity);
+
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) return;
+
+    return dataService.getEntity(id);
+  }
+
+  load(collection, query) {
+    // Run a query
+  }
+}
+export const Buttress = new ButtressInterface();
+
+export default class ButtressDb extends PolymerElement {
   static get is() { return 'buttress-db'; }
 
   static get template() {
@@ -45,6 +95,7 @@ export class ButtressDb extends PolymerElement {
           priority="[[item.priority]]",
           core="[[item.core]]",
           logging="[[logging]]",
+          load-on-startup="[[item.loadOnStartup]]",
           auto-load>
         </buttress-db-data-service>
       </template>
@@ -161,6 +212,13 @@ export class ButtressDb extends PolymerElement {
         value: 0
       },
 
+      loadOnStartup: {
+        type: Array,
+        value: function() {
+          return [];
+        },
+      },
+
       settings: {
         type: Object,
         notify: true,
@@ -209,7 +267,7 @@ export class ButtressDb extends PolymerElement {
   static get observers() {
     return [
       '__tokenChanged(token, nonModuleDependencies.*)',
-      '__dbSchemaChanged(coreCollections, dbSchema.*)',
+      '__dbSchemaChanged(loadOnStartup, dbSchema.*)',
       '__settingChanged(settings.*)'
     ];
   }
@@ -218,6 +276,8 @@ export class ButtressDb extends PolymerElement {
     super.ready();
     this.addEventListener('data-service-list', ev => this.__onDataLoaded(ev));
     this.addEventListener('data-service-ready', ev => this.__dataServiceReady(ev));
+
+    Buttress.bind(this);
   }
   
   connectedCallback() {
@@ -324,23 +384,10 @@ export class ButtressDb extends PolymerElement {
 
   __dbSchemaChanged() {
     const schema = this.get('dbSchema');
-    const coreCollections = this.get('coreCollections');
+    const loadOnStartup = this.get('loadOnStartup');
     if (!schema || schema.length < 1) return;
 
     AppDb.Schema.schema = schema;
-
-    coreCollections.forEach(collection => {
-      const key = Sugar.String.camelize(collection, false);
-      const idx = this.push('__collections', {
-        name: collection,
-        status: 'uninitialised',
-        priority: 1,
-        data: [],
-        core: true
-      }) - 1;
-      this.set(['db', key], this.get(['__collections', idx]));
-      this.linkPaths(['db', key], `__collections.${idx}`);
-    });
 
     // Generate db data map
     schema.forEach(s => {
@@ -350,13 +397,16 @@ export class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: false
+        core: false,
+        loadOnStartup: (loadOnStartup.length < 1 || loadOnStartup.includes(s.name)) ? true : false,
       }) - 1;
+      this.unlinkPaths(['db', key]);
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
     });
 
     if (this.get('__localDB')) {
+      console.log(this.get('__localDB'));
       const collections = [].concat(schema).map(c => Sugar.String.camelize(c.name, false));
       this.get('__localDB').init({
         task: 'init',
@@ -424,6 +474,10 @@ export class ButtressDb extends PolymerElement {
 
     services.shift().triggerGet();
     this.__numRequests++;
+  }
+
+  dataService(collection) {
+    return this.shadowRoot.querySelector(`#${collection}`);
   }
 
   // Local Storage
