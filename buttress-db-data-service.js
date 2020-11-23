@@ -2,38 +2,19 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
 import { AppDb } from './buttress-db-schema.js';
 
-import '@polymer/iron-ajax/iron-ajax.js';
-
 export class ButtressDbDataService extends PolymerElement {
   static get is() { return 'buttress-db-data-service'; }
 
   static get template() {
-    return html`
-      <style>
-        :host {
-          display: none;
-        }
-      </style>
-
-      <iron-ajax 
-        id="ajaxService"
-        url="{{rqUrl}}",
-        handleAs="json",
-        method="{{rqMethod}}",
-        content-type="{{rqContentType}}",
-        params="{{rqParams}}",
-        body="{{rqBody}}",
-        on-response="__ajaxResponse",
-        on-error="__ajaxError",
-        last-response="{{rqResponse}}">
-      </iron-ajax>
-    `;
+    return html`<style>:host { display: none; }</style>`;
   }
+
   static get properties() {
     return {
       token: String,
       endpoint: String,
       apiPath: String,
+
       status: {
         type: String,
         value: '',
@@ -50,10 +31,6 @@ export class ButtressDbDataService extends PolymerElement {
         value: false
       },
 
-      priority: {
-        type: Number,
-        value: '99'
-      },
       loaded: {
         type: Boolean,
         value: false,
@@ -69,15 +46,6 @@ export class ButtressDbDataService extends PolymerElement {
         value: function() { return []; },
         notify: true
       },
-      liveData: {
-        type: Array,
-        value: []
-      },
-      readOnly: {
-        type: Boolean,
-        value: false,
-        reflectToAttribute: true
-      },
 
       requestQueue: {
         type: Array,
@@ -85,14 +53,6 @@ export class ButtressDbDataService extends PolymerElement {
           return [];
         }
       },
-      request: {
-        type: Object
-      },
-      rqUrl: String,
-      rqContentType: String,
-      rqParams: {},
-      rqBody: {},
-      rqResponse: [],
 
       loadOnStartup: {
         type: Boolean,
@@ -127,7 +87,7 @@ export class ButtressDbDataService extends PolymerElement {
    * @private
    */
   __dataSplices(cr) {
-    if (!cr || this.readOnly) {
+    if (!cr) {
       return;
     }
     if (this.get('logging')) console.log('__dataSplices', cr);
@@ -171,8 +131,7 @@ export class ButtressDbDataService extends PolymerElement {
       delete this.__internalChange__;
       return;
     }
-    if (/\.length$/.test(cr.path) === true
-      || this.readOnly) {
+    if (/\.length$/.test(cr.path) === true) {
       return;
     }
 
@@ -323,10 +282,7 @@ export class ButtressDbDataService extends PolymerElement {
     this.__queueRequest({
       type: 'list',
       url: this.vectorBaseUrl(),
-      entityId: -1,
-      method: 'GET',
-      contentType: '',
-      body: {}
+      method: 'GET'
     });
   }
   __generateGetRequest(entityId) {
@@ -336,9 +292,7 @@ export class ButtressDbDataService extends PolymerElement {
       type: 'get',
       url: this.scalarBaseUrl(entityId),
       entityId: entityId,
-      method: 'GET',
-      contentType: '',
-      body: {}
+      method: 'GET'
     });
   }
   __generateRmRequest(entityId) {
@@ -349,8 +303,6 @@ export class ButtressDbDataService extends PolymerElement {
       url: this.scalarBaseUrl(entityId),
       entityId: entityId,
       method: 'DELETE',
-      contentType: '',
-      body: {}
     });
   }
   __generateAddRequest(entity) {
@@ -382,8 +334,13 @@ export class ButtressDbDataService extends PolymerElement {
   }
 
   __queueRequest(request) {
-    this.requestQueue.push(request);
-    this.__updateQueue();
+    return new Promise((resolve, reject) => {
+      request.resolve = resolve;
+      request.reject = reject;
+
+      this.requestQueue.push(request);
+      this.__updateQueue();
+    });
   }
 
   __updateQueue() {
@@ -401,23 +358,39 @@ export class ButtressDbDataService extends PolymerElement {
   __generateRequest(rq) {
     const token = this.get('token');
     rq.response = null;
-    rq.params = {
-      urq: Date.now(),
-      token: token
-    };
 
-    if (this.get('logging')) console.log(rq.body);
-    this.rqUrl = rq.url;
-    this.rqMethod = rq.method;
-    this.rqContentType = rq.contentType;
-    this.rqParams = rq.params;
-    this.rqBody = rq.body;
-
-    this.$.ajaxService.generateRequest();
     this.status = 'working';
+
+    const body = (rq.body) ? JSON.stringify(rq.body) : null;
+
+    return fetch(`${rq.url}?urq=${Date.now()}&token=${token}`, {
+      method: rq.method,
+      cache: 'no-cache',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    })
+      .then((response) => {
+        console.log(response);
+
+        if (response.ok) {
+          return response.json();
+        } else {
+          // Handle Buttress Error
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
+      })
+      .then((a) => this.__ajaxResponse(a))
+      .catch((err) => {
+        // will only reject on network failure or if anything prevented the request from completing.
+        console.error(err);
+        if (rq.reject) rq.reject(err);
+        this.status = 'error';
+      });
   }
 
-  __ajaxResponse(ev) {
+  __ajaxResponse(response) {
     let rq = this.requestQueue.shift();
 
     if (!rq) {
@@ -425,7 +398,7 @@ export class ButtressDbDataService extends PolymerElement {
       return;
     }
 
-    rq.response = ev.detail.response;
+    rq.response = response;
     switch (rq.type) {
       default:
         break;
@@ -444,10 +417,8 @@ export class ButtressDbDataService extends PolymerElement {
     }
 
     this.status = 'done';
+    if (rq.resolve) rq.resolve();
     this.__updateQueue();
-  }
-  __ajaxError() {
-    this.status = 'error';
   }
 
   __ajaxGetResponse(rq) {
@@ -465,7 +436,7 @@ export class ButtressDbDataService extends PolymerElement {
   __ajaxListResponse(rq) {
     if (this.get('logging')) console.log('__ajaxListResponse', rq);
     this.__internalChange__ = true;
-    this.data = this.liveData = rq.response;
+    this.data = rq.response;
     this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
     this.set('loaded', true);
   }
