@@ -1,7 +1,5 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element';
 
-import '@polymer/iron-ajax/iron-ajax';
-
 import './buttress-db-data-service.js';
 import './buttress-db-realtime-handler.js';
 
@@ -56,8 +54,11 @@ class ButtressInterface {
     return dataService.getEntity(id);
   }
 
-  load(collection, query) {
-    // Run a query
+  search(collection, query) {
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) return;
+
+    return dataService.search(query);
   }
 }
 export const Buttress = new ButtressInterface();
@@ -161,12 +162,6 @@ export default class ButtressDb extends PolymerElement {
         type: Object
       },
 
-      dbSchema: {
-        type: Array,
-        value: function() {
-          return [];
-        }
-      },
       db: {
         type: Object,
         value: function() {
@@ -363,6 +358,7 @@ export default class ButtressDb extends PolymerElement {
   }
 
   __tokenChanged() {
+    const endpoint = this.get('endpoint');
     const token = this.get('token');
     const nonModuleDependencies = this.get('nonModuleDependencies');
     if (!token || nonModuleDependencies.some(d => d.loaded === false)){
@@ -370,16 +366,30 @@ export default class ButtressDb extends PolymerElement {
     }
 
     // Fetch app schema using provided token
-    this.set('rqSchemaParams', {
-      urq: Date.now(),
-      token: token
-    });
-    this.$.schema.generateRequest();
-  }
+    return fetch(`${endpoint}/api/v1/app/schema?urq=${Date.now()}&token=${token}`, {
+      method: 'GET',
+      cache: 'no-cache',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((response) => {
+        console.log(response);
 
-  __dbSchemaError(ev) {
-    this.set('error', true);
-    this.set('lastError', ev);
+        if (response.ok) {
+          return response.json();
+        } else {
+          // Handle Buttress Error
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
+      })
+      .then((schema) => this.set('dbSchema', schema))
+      .catch((err) => {
+        // will only reject on network failure or if anything prevented the request from completing.
+        console.error(err);
+        this.set('error', true);
+        this.set('lastError', err);
+      });
   }
 
   __dbSchemaChanged() {
