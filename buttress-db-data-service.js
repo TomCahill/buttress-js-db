@@ -460,7 +460,7 @@ export default class ButtressDbDataService extends PolymerElement {
     if (this.get('logging')) console.log('__ajaxListResponse', rq);
     if (!entites || entites.length < 1) return;
 
-    const missingEntites = entites.filter((entity) => this.data.findIndex(((e) => e.id === entity.id)));
+    const missingEntites = entites.filter((entity) => this.data.findIndex((e) => e.id === entity.id) === -1);
 
     this.__internalChange__ = true;
     this.data = this.data.concat(missingEntites);
