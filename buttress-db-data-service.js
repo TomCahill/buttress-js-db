@@ -2,7 +2,7 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
 import { AppDb } from './buttress-db-schema.js';
 
-export class ButtressDbDataService extends PolymerElement {
+export default class ButtressDbDataService extends PolymerElement {
   static get is() { return 'buttress-db-data-service'; }
 
   static get template() {
@@ -277,9 +277,12 @@ export class ButtressDbDataService extends PolymerElement {
   getEntity(id) {
     return this.__generateGetRequest(id);
   }
+  search(query) {
+    return this.__generateSearchRequest(query);
+  }
 
   __generateListRequest() {
-    this.__queueRequest({
+    return this.__queueRequest({
       type: 'list',
       url: this.vectorBaseUrl(),
       method: 'GET'
@@ -288,17 +291,27 @@ export class ButtressDbDataService extends PolymerElement {
   __generateGetRequest(entityId) {
     if (this.get('logging')) console.log(`get rq: ${entityId}`);
 
-    this.__queueRequest({
+    return this.__queueRequest({
       type: 'get',
       url: this.scalarBaseUrl(entityId),
       entityId: entityId,
       method: 'GET'
     });
   }
+  __generateSearchRequest(query) {
+    if (this.get('logging')) console.log(`get rq: ${query}`);
+
+    return this.__queueRequest({
+      type: 'search',
+      url: this.vectorBaseUrl(),
+      method: 'SEARCH',
+      body: query,
+    });
+  }
   __generateRmRequest(entityId) {
     if (this.get('logging')) console.log(`remove rq: ${entityId}`);
 
-    this.__queueRequest({
+    return this.__queueRequest({
       type: 'rm',
       url: this.scalarBaseUrl(entityId),
       entityId: entityId,
@@ -308,7 +321,7 @@ export class ButtressDbDataService extends PolymerElement {
   __generateAddRequest(entity) {
     if (this.get('logging')) console.log(`add rq: ${entity.name}`);
 
-    this.__queueRequest({
+    return this.__queueRequest({
       type: 'add',
       url: this.vectorBaseUrl(),
       entityId: -1,
@@ -320,7 +333,7 @@ export class ButtressDbDataService extends PolymerElement {
   __generateUpdateRequest(entityId, path, value) {
     if (this.get('logging')) console.log('update rq:', entityId, path, value);
 
-    this.__queueRequest({
+    return this.__queueRequest({
       type: 'update',
       url: this.scalarBaseUrl(entityId),
       entityId: entityId,
@@ -372,8 +385,6 @@ export class ButtressDbDataService extends PolymerElement {
       body: body,
     })
       .then((response) => {
-        console.log(response);
-
         if (response.ok) {
           return response.json();
         } else {
@@ -408,6 +419,9 @@ export class ButtressDbDataService extends PolymerElement {
       case 'list':
         this.__ajaxListResponse(rq);
         break;
+      case 'search':
+        this.__ajaxSearchResponse(rq);
+        break;
       // case 'update': {
       //   this.__ajaxUpdateResponse(rq);
       // } break;
@@ -437,6 +451,19 @@ export class ButtressDbDataService extends PolymerElement {
     if (this.get('logging')) console.log('__ajaxListResponse', rq);
     this.__internalChange__ = true;
     this.data = rq.response;
+    this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
+    this.set('loaded', true);
+  }
+
+  __ajaxSearchResponse(rq) {
+    const entites = rq.response;
+    if (this.get('logging')) console.log('__ajaxListResponse', rq);
+    if (!entites || entites.length < 1) return;
+
+    const missingEntites = entites.filter((entity) => this.data.findIndex(((e) => e.id === entity.id)));
+
+    this.__internalChange__ = true;
+    this.data = this.data.concat(missingEntites);
     this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
     this.set('loaded', true);
   }
