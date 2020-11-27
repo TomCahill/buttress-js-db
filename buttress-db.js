@@ -1,7 +1,5 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element';
 
-import '@polymer/iron-ajax/iron-ajax';
-
 import './buttress-db-data-service.js';
 import './buttress-db-realtime-handler.js';
 
@@ -12,7 +10,60 @@ import Worker from './buttress-db-worker.js';
 
 import 'sugar/dist/sugar';
 
-export class ButtressDb extends PolymerElement {
+class ButtressInterface {
+  constructor() {
+    this._instance = null;
+  }
+
+  bind(instance) {
+    this._instance = instance;
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  getPath(...args) {
+    return this._instance.get(...args);
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  setPath(...args) {
+    return this._instance.set(...args);
+  }
+
+  /**
+   * @param {string} collection
+   * @param {string} id
+   * @return {promise} entity
+   */
+  get(collection, id) {
+    console.log(collection, id);
+    const entity = this.getPath(`db.${collection}.${id}`);
+
+    if (entity) return Promise.resolve(entity);
+
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) return;
+
+    return dataService.getEntity(id);
+  }
+
+  search(collection, query) {
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) return;
+
+    return dataService.search(query);
+  }
+}
+export const Buttress = new ButtressInterface();
+
+export default class ButtressDb extends PolymerElement {
   static get is() { return 'buttress-db'; }
 
   static get template() {
@@ -45,6 +96,7 @@ export class ButtressDb extends PolymerElement {
           priority="[[item.priority]]",
           core="[[item.core]]",
           logging="[[logging]]",
+          load-on-startup="[[item.loadOnStartup]]",
           auto-load>
         </buttress-db-data-service>
       </template>
@@ -110,12 +162,6 @@ export class ButtressDb extends PolymerElement {
         type: Object
       },
 
-      dbSchema: {
-        type: Array,
-        value: function() {
-          return [];
-        }
-      },
       db: {
         type: Object,
         value: function() {
@@ -159,6 +205,13 @@ export class ButtressDb extends PolymerElement {
       __numRequests: {
         type: Number,
         value: 0
+      },
+
+      loadOnStartup: {
+        type: Array,
+        value: function() {
+          return [];
+        },
       },
 
       settings: {
@@ -209,7 +262,7 @@ export class ButtressDb extends PolymerElement {
   static get observers() {
     return [
       '__tokenChanged(token, nonModuleDependencies.*)',
-      '__dbSchemaChanged(coreCollections, dbSchema.*)',
+      '__dbSchemaChanged(loadOnStartup, dbSchema.*)',
       '__settingChanged(settings.*)'
     ];
   }
@@ -218,6 +271,8 @@ export class ButtressDb extends PolymerElement {
     super.ready();
     this.addEventListener('data-service-list', ev => this.__onDataLoaded(ev));
     this.addEventListener('data-service-ready', ev => this.__dataServiceReady(ev));
+
+    Buttress.bind(this);
   }
   
   connectedCallback() {
@@ -303,6 +358,7 @@ export class ButtressDb extends PolymerElement {
   }
 
   __tokenChanged() {
+    const endpoint = this.get('endpoint');
     const token = this.get('token');
     const nonModuleDependencies = this.get('nonModuleDependencies');
     if (!token || nonModuleDependencies.some(d => d.loaded === false)){
@@ -310,37 +366,38 @@ export class ButtressDb extends PolymerElement {
     }
 
     // Fetch app schema using provided token
-    this.set('rqSchemaParams', {
-      urq: Date.now(),
-      token: token
-    });
-    this.$.schema.generateRequest();
-  }
+    return fetch(`${endpoint}/api/v1/app/schema?urq=${Date.now()}&token=${token}`, {
+      method: 'GET',
+      cache: 'no-cache',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((response) => {
+        console.log(response);
 
-  __dbSchemaError(ev) {
-    this.set('error', true);
-    this.set('lastError', ev);
+        if (response.ok) {
+          return response.json();
+        } else {
+          // Handle Buttress Error
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
+      })
+      .then((schema) => this.set('dbSchema', schema))
+      .catch((err) => {
+        // will only reject on network failure or if anything prevented the request from completing.
+        console.error(err);
+        this.set('error', true);
+        this.set('lastError', err);
+      });
   }
 
   __dbSchemaChanged() {
     const schema = this.get('dbSchema');
-    const coreCollections = this.get('coreCollections');
+    const loadOnStartup = this.get('loadOnStartup');
     if (!schema || schema.length < 1) return;
 
     AppDb.Schema.schema = schema;
-
-    coreCollections.forEach(collection => {
-      const key = Sugar.String.camelize(collection, false);
-      const idx = this.push('__collections', {
-        name: collection,
-        status: 'uninitialised',
-        priority: 1,
-        data: [],
-        core: true
-      }) - 1;
-      this.set(['db', key], this.get(['__collections', idx]));
-      this.linkPaths(['db', key], `__collections.${idx}`);
-    });
 
     // Generate db data map
     schema.forEach(s => {
@@ -350,13 +407,16 @@ export class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: false
+        core: false,
+        loadOnStartup: (loadOnStartup.length < 1 || loadOnStartup.includes(s.name)) ? true : false,
       }) - 1;
+      this.unlinkPaths(['db', key]);
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
     });
 
     if (this.get('__localDB')) {
+      console.log(this.get('__localDB'));
       const collections = [].concat(schema).map(c => Sugar.String.camelize(c.name, false));
       this.get('__localDB').init({
         task: 'init',
@@ -424,6 +484,10 @@ export class ButtressDb extends PolymerElement {
 
     services.shift().triggerGet();
     this.__numRequests++;
+  }
+
+  dataService(collection) {
+    return this.shadowRoot.querySelector(`#${collection}`);
   }
 
   // Local Storage

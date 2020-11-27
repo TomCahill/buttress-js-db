@@ -25,7 +25,6 @@
   "main": "buttress-db.js",
   "dependencies": {
     "@polymer/polymer": "^3.4.1",
-    "@polymer/iron-ajax": "^3.0.1",
     "sugar": "2.0.6"
   },
   "devDependencies": {

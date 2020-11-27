@@ -2,38 +2,19 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 
 import { AppDb } from './buttress-db-schema.js';
 
-import '@polymer/iron-ajax/iron-ajax.js';
-
-export class ButtressDbDataService extends PolymerElement {
+export default class ButtressDbDataService extends PolymerElement {
   static get is() { return 'buttress-db-data-service'; }
 
   static get template() {
-    return html`
-      <style>
-        :host {
-          display: none;
-        }
-      </style>
-
-      <iron-ajax 
-        id="ajaxService"
-        url="{{rqUrl}}",
-        handleAs="json",
-        method="{{rqMethod}}",
-        content-type="{{rqContentType}}",
-        params="{{rqParams}}",
-        body="{{rqBody}}",
-        on-response="__ajaxResponse",
-        on-error="__ajaxError",
-        last-response="{{rqResponse}}">
-      </iron-ajax>
-    `;
+    return html`<style>:host { display: none; }</style>`;
   }
+
   static get properties() {
     return {
       token: String,
       endpoint: String,
       apiPath: String,
+
       status: {
         type: String,
         value: '',
@@ -50,10 +31,6 @@ export class ButtressDbDataService extends PolymerElement {
         value: false
       },
 
-      priority: {
-        type: Number,
-        value: '99'
-      },
       loaded: {
         type: Boolean,
         value: false,
@@ -69,38 +46,18 @@ export class ButtressDbDataService extends PolymerElement {
         value: function() { return []; },
         notify: true
       },
-      liveData: {
-        type: Array,
-        value: []
-      },
-      readOnly: {
-        type: Boolean,
-        value: false,
-        reflectToAttribute: true
-      },
-      vectorBaseUrl: {
-        type: String,
-        computed: "__computeVectorBaseUrl(endpoint, route, core, apiPath)"
-      },
-      scalarBaseUrl: {
-        type: String,
-        computed: "__computeScalarBaseUrl(endpoint, route, rqEntityId, core, apiPath)"
-      },
+
       requestQueue: {
         type: Array,
         value: function () {
           return [];
         }
       },
-      request: {
-        type: Object
-      },
-      rqEntityId: String,
-      rqUrl: String,
-      rqContentType: String,
-      rqParams: {},
-      rqBody: {},
-      rqResponse: []
+
+      loadOnStartup: {
+        type: Boolean,
+        value: false,
+      }
     };
   }
   static get observers() {
@@ -115,7 +72,13 @@ export class ButtressDbDataService extends PolymerElement {
   }
 
   triggerGet() {
-    this.__generateListRequest();
+    if (this.get('loadOnStartup')) {
+      this.__generateListRequest();
+    } else {
+      this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
+      this.set('loaded', true);
+      this.set('status', 'done');
+    }
   }
 
   /**
@@ -124,7 +87,7 @@ export class ButtressDbDataService extends PolymerElement {
    * @private
    */
   __dataSplices(cr) {
-    if (!cr || this.readOnly) {
+    if (!cr) {
       return;
     }
     if (this.get('logging')) console.log('__dataSplices', cr);
@@ -168,8 +131,7 @@ export class ButtressDbDataService extends PolymerElement {
       delete this.__internalChange__;
       return;
     }
-    if (/\.length$/.test(cr.path) === true
-      || this.readOnly) {
+    if (/\.length$/.test(cr.path) === true) {
       return;
     }
 
@@ -312,69 +274,86 @@ export class ButtressDbDataService extends PolymerElement {
     }
   }
 
-  __generateListRequest() {
-    this.rqEntityId = -1;
-    let request = {
-      type: 'list',
-      url: this.vectorBaseUrl,
-      entityId: this.rqEntityId,
-      method: 'GET',
-      contentType: '',
-      body: {}
-    };
+  getEntity(id) {
+    return this.__generateGetRequest(id);
+  }
+  search(query) {
+    return this.__generateSearchRequest(query);
+  }
 
-    this.__queueRequest(request);
+  __generateListRequest() {
+    return this.__queueRequest({
+      type: 'list',
+      url: this.vectorBaseUrl(),
+      method: 'GET'
+    });
+  }
+  __generateGetRequest(entityId) {
+    if (this.get('logging')) console.log(`get rq: ${entityId}`);
+
+    return this.__queueRequest({
+      type: 'get',
+      url: this.scalarBaseUrl(entityId),
+      entityId: entityId,
+      method: 'GET'
+    });
+  }
+  __generateSearchRequest(query) {
+    if (this.get('logging')) console.log(`get rq: ${query}`);
+
+    return this.__queueRequest({
+      type: 'search',
+      url: this.vectorBaseUrl(),
+      method: 'SEARCH',
+      body: query,
+    });
   }
   __generateRmRequest(entityId) {
     if (this.get('logging')) console.log(`remove rq: ${entityId}`);
 
-    this.rqEntityId = entityId;
-    let request = {
+    return this.__queueRequest({
       type: 'rm',
-      url: this.scalarBaseUrl,
-      entityId: this.rqEntityId,
+      url: this.scalarBaseUrl(entityId),
+      entityId: entityId,
       method: 'DELETE',
-      contentType: '',
-      body: {}
-    };
-
-    this.__queueRequest(request);
+    });
   }
   __generateAddRequest(entity) {
     if (this.get('logging')) console.log(`add rq: ${entity.name}`);
 
-    this.rqEntityId = -1;
-    let request = {
+    return this.__queueRequest({
       type: 'add',
-      url: this.vectorBaseUrl,
-      entityId: this.rqEntityId,
+      url: this.vectorBaseUrl(),
+      entityId: -1,
       method: 'POST',
       contentType: 'application/json',
       body: entity
-    };
-    this.__queueRequest(request);
+    });
   }
   __generateUpdateRequest(entityId, path, value) {
-    if (this.get('logging')) console.log('update rq:',entityId, path, value);
+    if (this.get('logging')) console.log('update rq:', entityId, path, value);
 
-    this.rqEntityId = entityId;
-    let request = {
+    return this.__queueRequest({
       type: 'update',
-      url: this.scalarBaseUrl,
-      entityId: this.rqEntityId,
+      url: this.scalarBaseUrl(entityId),
+      entityId: entityId,
       method: 'PUT',
       contentType: 'application/json',
       body: {
         path: path,
         value: value
       }
-    };
-    this.__queueRequest(request);
+    });
   }
 
   __queueRequest(request) {
-    this.requestQueue.push(request);
-    this.__updateQueue();
+    return new Promise((resolve, reject) => {
+      request.resolve = resolve;
+      request.reject = reject;
+
+      this.requestQueue.push(request);
+      this.__updateQueue();
+    });
   }
 
   __updateQueue() {
@@ -392,23 +371,37 @@ export class ButtressDbDataService extends PolymerElement {
   __generateRequest(rq) {
     const token = this.get('token');
     rq.response = null;
-    rq.params = {
-      urq: Date.now(),
-      token: token
-    };
 
-    if (this.get('logging')) console.log(rq.body);
-    this.rqUrl = rq.url;
-    this.rqMethod = rq.method;
-    this.rqContentType = rq.contentType;
-    this.rqParams = rq.params;
-    this.rqBody = rq.body;
-
-    this.$.ajaxService.generateRequest();
     this.status = 'working';
+
+    const body = (rq.body) ? JSON.stringify(rq.body) : null;
+
+    return fetch(`${rq.url}?urq=${Date.now()}&token=${token}`, {
+      method: rq.method,
+      cache: 'no-cache',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    })
+      .then((response) => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          // Handle Buttress Error
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
+      })
+      .then((a) => this.__ajaxResponse(a))
+      .catch((err) => {
+        // will only reject on network failure or if anything prevented the request from completing.
+        console.error(err);
+        if (rq.reject) rq.reject(err);
+        this.status = 'error';
+      });
   }
 
-  __ajaxResponse(ev) {
+  __ajaxResponse(response) {
     let rq = this.requestQueue.shift();
 
     if (!rq) {
@@ -416,12 +409,18 @@ export class ButtressDbDataService extends PolymerElement {
       return;
     }
 
-    rq.response = ev.detail.response;
+    rq.response = response;
     switch (rq.type) {
       default:
         break;
+      case 'get':
+        this.__ajaxGetResponse(rq);
+        break;
       case 'list':
         this.__ajaxListResponse(rq);
+        break;
+      case 'search':
+        this.__ajaxSearchResponse(rq);
         break;
       // case 'update': {
       //   this.__ajaxUpdateResponse(rq);
@@ -432,16 +431,39 @@ export class ButtressDbDataService extends PolymerElement {
     }
 
     this.status = 'done';
+    if (rq.resolve) rq.resolve();
     this.__updateQueue();
   }
-  __ajaxError() {
-    this.status = 'error';
+
+  __ajaxGetResponse(rq) {
+    const entity = rq.response;
+    if (this.get('logging')) console.log('__ajaxGetResponse', entity);
+    if (!entity) return;
+
+    const idx = this.data.findIndex(((e) => e.id === entity.id));
+    if (idx !== -1) return;
+
+    entity.__readonly__ = true;
+    this.push('data', entity);
   }
 
   __ajaxListResponse(rq) {
     if (this.get('logging')) console.log('__ajaxListResponse', rq);
     this.__internalChange__ = true;
-    this.data = this.liveData = rq.response;
+    this.data = rq.response;
+    this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
+    this.set('loaded', true);
+  }
+
+  __ajaxSearchResponse(rq) {
+    const entites = rq.response;
+    if (this.get('logging')) console.log('__ajaxListResponse', rq);
+    if (!entites || entites.length < 1) return;
+
+    const missingEntites = entites.filter((entity) => this.data.findIndex((e) => e.id === entity.id) === -1);
+
+    this.__internalChange__ = true;
+    this.data = this.data.concat(missingEntites);
     this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
     this.set('loaded', true);
   }
@@ -495,19 +517,25 @@ export class ButtressDbDataService extends PolymerElement {
     });
   }
 
-  __computeVectorBaseUrl(endpoint, route) {
+  vectorBaseUrl() {
+    const endpoint = this.get('endpoint');
+    const route = this.get('route');
+
     if (!this.get('core') && this.get('apiPath')) {
       return `${endpoint}/${this.get('apiPath')}/api/v1/${route}`;
     }
 
     return `${endpoint}/api/v1/${route}`;
   }
-  __computeScalarBaseUrl(endpoint) {
+  scalarBaseUrl(entityId) {
+    const endpoint = this.get('endpoint');
+    const route = this.get('route');
+
     if (!this.get('core') && this.get('apiPath')) {
-      return `${endpoint}/${this.get('apiPath')}/api/v1/${this.route}/${this.rqEntityId}`;
+      return `${endpoint}/${this.get('apiPath')}/api/v1/${route}/${entityId}`;
     }
 
-    return `${endpoint}/api/v1/${this.route}/${this.rqEntityId}`;
+    return `${endpoint}/api/v1/${route}/${entityId}`;
   }
 }
 window.customElements.define(ButtressDbDataService.is, ButtressDbDataService);
