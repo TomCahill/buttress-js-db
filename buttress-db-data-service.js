@@ -11,6 +11,7 @@ export default class ButtressDbDataService extends PolymerElement {
 
   static get properties() {
     return {
+      id: String,
       token: String,
       endpoint: String,
       apiPath: String,
@@ -68,17 +69,17 @@ export default class ButtressDbDataService extends PolymerElement {
   }
 
   connectedCallback() {
-    this.dispatchEvent(new CustomEvent('data-service-ready', {detail: this, bubbles: true, composed: true}));
+    this.dispatchEvent(new CustomEvent('data-service-ready', {detail: this.get('id'), bubbles: true, composed: true}));
   }
 
-  triggerGet() {
+  load() {
     if (this.get('loadOnStartup')) {
-      this.__generateListRequest();
-    } else {
-      this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
-      this.set('loaded', true);
-      this.set('status', 'done');
+      return this.__generateListRequest();
     }
+
+    this.set('loaded', true);
+    this.set('status', 'done');
+    return Promise.resolve();
   }
 
   /**
@@ -451,7 +452,6 @@ export default class ButtressDbDataService extends PolymerElement {
     if (this.get('logging')) console.log('__ajaxListResponse', rq);
     this.__internalChange__ = true;
     this.data = rq.response;
-    this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
     this.set('loaded', true);
   }
 
@@ -464,7 +464,6 @@ export default class ButtressDbDataService extends PolymerElement {
 
     this.__internalChange__ = true;
     this.data = this.data.concat(missingEntites);
-    this.dispatchEvent(new CustomEvent('data-service-list', {detail: this, bubbles: true, composed: true}));
     this.set('loaded', true);
   }
 

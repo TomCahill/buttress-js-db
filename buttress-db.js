@@ -43,7 +43,6 @@ class ButtressInterface {
    * @return {promise} entity
    */
   get(collection, id) {
-    console.log(collection, id);
     const entity = this.getPath(`db.${collection}.${id}`);
 
     if (entity) return Promise.resolve(entity);
@@ -138,7 +137,6 @@ export default class ButtressDb extends PolymerElement {
         value: function() {
           return {
             loaded: false,
-            unpacking: false,
             current: 0,
             total: 0
           }
@@ -154,10 +152,6 @@ export default class ButtressDb extends PolymerElement {
         notify: true,
       },
 
-      __maxConcurrentRequests: {
-        type: Number,
-        value: 4
-      },
       rqSchemaParams: {
         type: Object
       },
@@ -165,10 +159,6 @@ export default class ButtressDb extends PolymerElement {
       db: {
         type: Object,
         value: function() {
-          // post: {
-          //   status: 'uninitialised',
-          //   data: [],
-          // }
           return {};
         },
         notify: true
@@ -183,28 +173,13 @@ export default class ButtressDb extends PolymerElement {
         },
         notify: true
       },
-      coreCollections: {
-        type: Array,
-        value: function() {
-          return [];
-        },
-      },
+
       __collections: {
         type: Object,
         value: function() {
           return [];
         },
         notify: true
-      },
-      __services: {
-        type: Array,
-        value: function() {
-          return [];
-        }
-      },
-      __numRequests: {
-        type: Number,
-        value: 0
       },
 
       loadOnStartup: {
@@ -263,18 +238,18 @@ export default class ButtressDb extends PolymerElement {
     return [
       '__tokenChanged(token, nonModuleDependencies.*)',
       '__dbSchemaChanged(loadOnStartup, dbSchema.*)',
+      '__dbLoadingState(__collections.*)',
       '__settingChanged(settings.*)'
     ];
   }
   
   ready() {
     super.ready();
-    this.addEventListener('data-service-list', ev => this.__onDataLoaded(ev));
     this.addEventListener('data-service-ready', ev => this.__dataServiceReady(ev));
 
     Buttress.bind(this);
   }
-  
+
   connectedCallback() {
     super.connectedCallback();
     const settings = this.get('settings');
@@ -344,17 +319,25 @@ export default class ButtressDb extends PolymerElement {
   }
 
   __dataServiceReady(ev){
-    const collections = this.get('__collections');
+    const collectionIdx = this.get('__collections').findIndex((c) => c.name === ev.detail);
+    if (collectionIdx === -1) return;
 
-    this.push('__services', ev.detail);
+    this.set(`__collections.${collectionIdx}.ready`, true);
 
-    if (collections.length === this.get('__services.length')) {
-      this.set('loading.current', 0);
-      this.set('loading.total', this.get('__collections.length'));
-      this.__services.sort((a,b) => a.priority - b.priority);
-      for (let x=0; x < this.__maxConcurrentRequests; x++)
-        this.__onDataLoaded();
+    if (this.get('__collections').every((c) => c.ready)) {
+      const stack = this.get('__collections').map((c) => () => this.dataService(c.name).load());
+      this._loadDataService(stack)
+        .then(() => {
+          this.set('loaded', true);
+          this.set('loading.loaded', true);
+        });
     }
+  }
+
+  __dbLoadingState(cr) {
+    if (!cr || !cr.path.match(/__collections.\d.loaded/)) return;
+    this.set('loading.current', this.get('__collections').filter((c) => c.loaded).length);
+    this.set('loading.percent', (this.get('loading.current') / this.get('loading.total')) * 100);
   }
 
   __tokenChanged() {
@@ -408,12 +391,18 @@ export default class ButtressDb extends PolymerElement {
         priority: 1,
         data: [],
         core: false,
-        loadOnStartup: (loadOnStartup.length < 1 || loadOnStartup.includes(s.name)) ? true : false,
+        ready: false,
+        loaded: false,
+        loadOnStartup: (loadOnStartup.includes(s.name)) ? true : false,
       }) - 1;
       this.unlinkPaths(['db', key]);
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
     });
+
+    this.set('loaded.loaded', false);
+    this.set('loading.current', 0);
+    this.set('loading.total', this.get('__collections.length'));
 
     if (this.get('__localDB')) {
       console.log(this.get('__localDB'));
@@ -455,35 +444,23 @@ export default class ButtressDb extends PolymerElement {
     }
   }
 
-  __onDataLoaded(ev) {
-    const services = this.get('__services');
-
-    // No check for network load
-    if (!this.get('settings.network_read')) {
-      if (this.get('logging')) console.warn('Data service disabled network call');
-      return;
+  _loadDataService(stack, limit = 4) {
+    const batchChain = [];
+  
+    const executeNext = (int) => {
+      if (stack.length < 1) return Promise.resolve();
+  
+      const next = stack.shift();
+      return next().then(() => executeNext(int));
+    };
+  
+    for (let i = 0; i < limit; i++) {
+      batchChain.push(executeNext(i));
     }
 
-    if (!ev && services.length > 0) {
-      services.shift().triggerGet();
-      this.__numRequests++;
-      return;
-    }
-
-    if (--this.__numRequests === 0) {
-      this.set('loaded', true);
-      this.set('loading.loaded', true);
-    }
-
-    this.set('loading.current', this.get('loading.total') - this.get('__services.length') );
-    this.set('loading.percent', (this.get('loading.current') / this.get('loading.total')) * 100);
-
-    if (!services.length) {
-      return;
-    }
-
-    services.shift().triggerGet();
-    this.__numRequests++;
+    console.log(batchChain);
+  
+    return Promise.all(batchChain);
   }
 
   dataService(collection) {
