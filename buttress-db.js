@@ -50,7 +50,9 @@ class ButtressInterface {
     if (entity) return Promise.resolve(entity);
 
     const dataService = this._instance.dataService(collection);
-    if (!dataService) return;
+    if (!dataService) {
+      return Promise.reject(new Error(`Unable to find data service ${collection}`));
+    }
 
     return dataService.getEntity(id);
   }
@@ -71,7 +73,9 @@ class ButtressInterface {
   
   search(collection, query, limit = null) {
     const dataService = this._instance.dataService(collection);
-    if (!dataService) return;
+    if (!dataService) {
+      return Promise.reject(new Error(`Unable to find data service ${collection}`));
+    }
 
     return dataService.search(query);
   }

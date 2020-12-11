@@ -127,7 +127,7 @@ export class ButtressDbQuery extends PolymerElement {
 
     if (this.query) {
       if (this.logging) console.log(this.logLabel, 'silly', '__docStatus', 'query', this.query);
-      this.set('query.__loaded', true);
+      return this.__queryDebouncer();
     }
   }
 
