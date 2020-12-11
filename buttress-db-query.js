@@ -3,6 +3,8 @@ import { timeOut } from '@polymer/polymer/lib/utils/async.js';
 import { Debouncer } from '@polymer/polymer/lib/utils/debounce.js';
 import { get as getPath } from '@polymer/polymer/lib/utils/path.js';
 
+import { Buttress } from './buttress-db.js';
+
 export class ButtressDbQuery extends PolymerElement {
   static get is() { return 'buttress-db-query'; }
 
@@ -87,7 +89,14 @@ export class ButtressDbQuery extends PolymerElement {
         value: 'DESC'
       },
 
-      __debouncer: Object,
+      _pendingButtress: {
+        type: Boolean,
+        value: false,
+      },
+      _rerunQuery: {
+        type: Boolean,
+        value: false,
+      },
 
       paused: {
         type: Boolean,
@@ -100,6 +109,12 @@ export class ButtressDbQuery extends PolymerElement {
       '__queryDebouncer(query.*, page, limit, paused)',
       '__docStatus(doc, doc.loaded)'
     ];
+  }
+
+  connectedCallback() {
+    this._queryDebouncer = null;
+    this._pendingButtress = null;
+    this._retryQuery = null;
   }
 
   __docStatus() {
@@ -115,6 +130,7 @@ export class ButtressDbQuery extends PolymerElement {
       this.set('query.__loaded', true);
     }
   }
+
   __queryDebouncer() {
     this.set('loading', true);
     const doc = this.get('doc');
@@ -123,64 +139,87 @@ export class ButtressDbQuery extends PolymerElement {
       return;
     }
 
-    // If we have an update to a path notify straight away
-    let crPath = null;
-    if (this.get('query.__crPath') && this.get('dataPath')) {
-      // Fetch the change record path from the query if passed through
-      // remove the data path from the change record path
-      crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
-      if (crPath.indexOf('.') === 0) {
-        crPath = crPath.substring(1);
-      }
-    }
-    if (crPath) {
-      const splitCRPath = crPath.split('.');
-      const docCRIdx = splitCRPath.shift();
-      const docCRItem = doc.data[docCRIdx];
-
-      if (this.get('findAllUnpaged')) {
-        const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
-        if (findAllUnpagedIdx !== -1) {
-          this.notifyPath(`findAllUnpaged.${findAllUnpagedIdx}.${splitCRPath.join('.')}`);
-        }
-      }
-      if (this.get('findAll')) {
-        const findAllIdx = this.get('findAll').findIndex(i => i === docCRItem);
-        if (findAllIdx !== -1) {
-          this.notifyPath(`findAll.${findAllIdx}.${splitCRPath.join('.')}`);
-        }
-      }
-      if (this.get('findOne')) {
-        if (docCRItem === this.get('findOne')) {
-          this.notifyPath(`findOne.${splitCRPath.join('.')}`);
-        }
-      }
-    }
-
     // Debounce the query till later
-    this.set('_debouncer', Debouncer.debounce(
-      this.get('_debouncer'),
-      timeOut.after(100),
-      () => {
-        this.__query()
+    this._queryDebouncer = Debouncer.debounce(this._queryDebouncer, timeOut.after(100), () => {
+      return this.__query()
+        .then(() => {
+          // If we have an update to a path notify straight away
+          let crPath = null;
+          if (this.get('query.__crPath') && this.get('dataPath')) {
+            // Fetch the change record path from the query if passed through
+            // remove the data path from the change record path
+            crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
+            if (crPath.indexOf('.') === 0) {
+              crPath = crPath.substring(1);
+            }
+          }
+
+          if (crPath) {
+            const splitCRPath = crPath.split('.');
+            const docCRIdx = splitCRPath.shift();
+            const docCRItem = doc.data[docCRIdx];
+
+            if (this.get('findAllUnpaged')) {
+              const findAllUnpagedIdx = this.get('findAllUnpaged').findIndex(i => i === docCRItem);
+              if (findAllUnpagedIdx !== -1) {
+                this.notifyPath(`findAllUnpaged.${findAllUnpagedIdx}.${splitCRPath.join('.')}`);
+              }
+            }
+            if (this.get('findAll')) {
+              const findAllIdx = this.get('findAll').findIndex(i => i === docCRItem);
+              if (findAllIdx !== -1) {
+                this.notifyPath(`findAll.${findAllIdx}.${splitCRPath.join('.')}`);
+              }
+            }
+            if (this.get('findOne')) {
+              if (docCRItem === this.get('findOne')) {
+                this.notifyPath(`findOne.${splitCRPath.join('.')}`);
+              }
+            }
+          }
+        })
         .then(() => {
           this.set('loading', false);
-        });
-      }
-    ));
-  }
-  __query() {
-    return new Promise(resolve => {
-      if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
-      if (!this.query) {
-        if (this.logging) console.log(this.logLabel, 'silly', '__query', 'no query');
-        return resolve(false);
-      }
-      if (this.get('paused') === true) {
-        if (this.logging) console.log(this.logLabel, 'silly', '__query', 'Paused');
-        return resolve(false);
-      }
 
+          if (this._rerunQuery) {
+            this._rerunQuery = false;
+            this.__queryDebouncer();
+          }
+        })
+    });
+  }
+
+  __query() {
+    const isSourceStore = this.get('db') && this.get('doc');
+    const collection = this.get('doc.name');
+
+    if (this.logging) console.log(this.logLabel, 'debug', '__query', this.query);
+    if (!this.query) {
+      if (this.logging) console.log(this.logLabel, 'silly', '__query', 'no query');
+      return Promise.resolve(false);
+    }
+    if (this.get('paused') === true) {
+      if (this.logging) console.log(this.logLabel, 'silly', '__query', 'Paused');
+      return Promise.resolve(false);
+    }
+    if (this._pendingButtress) {
+      this._retryQuery = false;
+      return Promise.resolve(false);
+    }
+
+    // query is against the data store, we should send the search query to buttress too
+    if (isSourceStore && collection) {
+      this._pendingButtress = true;
+      return Buttress.searchOnce(collection, this.query)
+        .then(() => this._pendingButtress = false)
+        .then(() => this._filterLocalData());
+    }
+
+    return this._filterLocalData();
+  }
+
+  _filterLocalData() {
+    return new Promise(resolve => {
       if (this.logging) console.log(this.logLabel, 'silly', this.query);
 
       let data = this.doc.data;

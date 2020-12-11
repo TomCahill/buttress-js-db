@@ -13,6 +13,8 @@ import 'sugar/dist/sugar';
 class ButtressInterface {
   constructor() {
     this._instance = null;
+
+    this._searchHashMap = {};
   }
 
   bind(instance) {
@@ -53,11 +55,41 @@ class ButtressInterface {
     return dataService.getEntity(id);
   }
 
-  search(collection, query) {
+  searchOnce(collection, query, limit = null) {
+    // Check for hash
+    const hash = this._hashCollectionQuery(collection, query);
+    if (this._searchHashMap[hash]) {
+      return Promise.resolve(false);
+    }
+
+    return this.search(collection, query, limit)
+      .then((res) => {
+        this._searchHashMap[hash] = true;
+        return res;
+      });
+  }
+  
+  search(collection, query, limit = null) {
     const dataService = this._instance.dataService(collection);
     if (!dataService) return;
 
     return dataService.search(query);
+  }
+
+  _hashCollectionQuery(collection, object) {
+    const str = collection + JSON.stringify(object);
+
+    var hash = 0;
+    if (str.length == 0) {
+        return hash;
+    }
+    for (var i = 0; i < str.length; i++) {
+        var char = str.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+
+    return hash;
   }
 }
 export const Buttress = new ButtressInterface();
