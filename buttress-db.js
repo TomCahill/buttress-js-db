@@ -45,14 +45,13 @@ class ButtressInterface {
    * @return {promise} entity
    */
   get(collection, id) {
-    const entity = this.getPath(`db.${collection}.${id}`);
-
-    if (entity) return Promise.resolve(entity);
-
     const dataService = this._instance.dataService(collection);
     if (!dataService) {
       return Promise.reject(new Error(`Unable to find data service ${collection}`));
     }
+
+    const entity = this.getPath(`db.${collection}.data`).find((e) => e.id === id);
+    if (entity) return Promise.resolve(entity);
 
     return dataService.getEntity(id);
   }
