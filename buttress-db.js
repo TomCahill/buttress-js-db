@@ -14,6 +14,7 @@ class ButtressInterface {
   constructor() {
     this._instance = null;
 
+    this._searchLoadedCollection = {};
     this._searchHashMap = {};
   }
 
@@ -56,6 +57,29 @@ class ButtressInterface {
     return dataService.getEntity(id);
   }
 
+
+  /**
+   * @param {string} collection
+   * @return {promise} collection
+   */
+     getAll(collection) {
+      // Check for hash
+      const table = this._collectionIsLoaded(collection);
+      if (this._searchLoadedCollection[table]) {
+        return Promise.resolve(false);
+      }
+
+      const dataService = this._instance.dataService(collection);
+      if (!dataService) {
+        return Promise.reject(new Error(`Unable to find data service ${collection}`));
+      }
+
+      return dataService.getAllEntities()
+        .then(() => {
+          this._searchLoadedCollection[table] = true;
+        });
+    }
+
   searchOnce(collection, query, limit = null) {
     // Check for hash
     const hash = this._hashCollectionQuery(collection, query);
@@ -93,6 +117,18 @@ class ButtressInterface {
     }
 
     return hash;
+  }
+
+  _collectionIsLoaded(collection) {
+    let flag = false;
+
+    Object.keys(this._searchLoadedCollection).forEach((key) => {
+      if (collection === key) {
+        flag = false;
+      }
+    });
+
+    return flag;
   }
 }
 export const Buttress = new ButtressInterface();
