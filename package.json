@@ -1,7 +1,7 @@
 {
   "name": "@buttress/buttress-db",
   "description": "A set of elements for Polymer 3 enabling realtime data handling from ButtressJS",
-  "version": "3.1.0-alpha.1",
+  "version": "3.1.0",
   "author": "Lighten",
   "contributors": [
     "Chris Bates-Keegan <chris@wearelighten.co.uk>",
