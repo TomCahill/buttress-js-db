@@ -73,7 +73,7 @@ class ButtressInterface {
         return Promise.reject(new Error(`Unable to find data service ${collection}`));
       }
 
-      this._searchLoadedCollection[table] = true;
+      this._searchLoadedCollection[collection] = true;
 
       return dataService.getAllEntities()
         .catch((err) => console.error(err));
