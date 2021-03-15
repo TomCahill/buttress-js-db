@@ -75,8 +75,7 @@ class ButtressInterface {
 
       this._searchLoadedCollection[collection] = true;
 
-      return dataService.getAllEntities()
-        .catch((err) => console.error(err));
+      return dataService.getAllEntities();
     }
 
   searchOnce(collection, query, limit = null) {
