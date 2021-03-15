@@ -64,8 +64,7 @@ class ButtressInterface {
    */
      getAll(collection) {
       // Check for hash
-      const table = this._collectionIsLoaded(collection);
-      if (this._searchLoadedCollection[table]) {
+      if (this._searchLoadedCollection[collection]) {
         return Promise.resolve(false);
       }
 
@@ -74,10 +73,10 @@ class ButtressInterface {
         return Promise.reject(new Error(`Unable to find data service ${collection}`));
       }
 
+      this._searchLoadedCollection[table] = true;
+
       return dataService.getAllEntities()
-        .then(() => {
-          this._searchLoadedCollection[table] = true;
-        });
+        .catch((err) => console.error(err));
     }
 
   searchOnce(collection, query, limit = null) {
@@ -117,18 +116,6 @@ class ButtressInterface {
     }
 
     return hash;
-  }
-
-  _collectionIsLoaded(collection) {
-    let flag = false;
-
-    Object.keys(this._searchLoadedCollection).forEach((key) => {
-      if (collection === key) {
-        flag = false;
-      }
-    });
-
-    return flag;
   }
 }
 export const Buttress = new ButtressInterface();
