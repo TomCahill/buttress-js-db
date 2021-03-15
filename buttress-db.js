@@ -14,6 +14,7 @@ class ButtressInterface {
   constructor() {
     this._instance = null;
 
+    this._searchLoadedCollection = {};
     this._searchHashMap = {};
   }
 
@@ -55,6 +56,27 @@ class ButtressInterface {
 
     return dataService.getEntity(id);
   }
+
+
+  /**
+   * @param {string} collection
+   * @return {promise} collection
+   */
+     getAll(collection) {
+      // Check for hash
+      if (this._searchLoadedCollection[collection]) {
+        return Promise.resolve(false);
+      }
+
+      const dataService = this._instance.dataService(collection);
+      if (!dataService) {
+        return Promise.reject(new Error(`Unable to find data service ${collection}`));
+      }
+
+      this._searchLoadedCollection[collection] = true;
+
+      return dataService.getAllEntities();
+    }
 
   searchOnce(collection, query, limit = null) {
     // Check for hash

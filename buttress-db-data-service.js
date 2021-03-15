@@ -278,6 +278,9 @@ export default class ButtressDbDataService extends PolymerElement {
   getEntity(id) {
     return this.__generateGetRequest(id);
   }
+  getAllEntities(id) {
+    return this.__generateListRequest();
+  }
   search(query) {
     return this.__generateSearchRequest(query);
   }
@@ -379,7 +382,7 @@ export default class ButtressDbDataService extends PolymerElement {
 
     return fetch(`${rq.url}?urq=${Date.now()}&token=${token}`, {
       method: rq.method,
-      cache: 'no-cache',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
       },
