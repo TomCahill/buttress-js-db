@@ -1,7 +1,5 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element';
 
-import '@polymer/iron-ajax/iron-ajax';
-
 import './buttress-db-data-service.js';
 import './buttress-db-realtime-handler.js';
 
@@ -12,7 +10,116 @@ import Worker from './buttress-db-worker.js';
 
 import 'sugar/dist/sugar';
 
-export class ButtressDb extends PolymerElement {
+class ButtressInterface {
+  constructor() {
+    this._instance = null;
+
+    this._searchLoadedCollection = {};
+    this._searchHashMap = {};
+  }
+
+  bind(instance) {
+    this._instance = instance;
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  getPath(...args) {
+    return this._instance.get(...args);
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  setPath(...args) {
+    return this._instance.set(...args);
+  }
+
+  /**
+   * @param {string} collection
+   * @param {string} id
+   * @return {promise} entity
+   */
+  get(collection, id) {
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) {
+      return Promise.reject(new Error(`Unable to find data service ${collection}`));
+    }
+
+    const entity = this.getPath(`db.${collection}.data`).find((e) => e.id === id);
+    if (entity) return Promise.resolve(entity);
+
+    return dataService.getEntity(id);
+  }
+
+
+  /**
+   * @param {string} collection
+   * @return {promise} collection
+   */
+     getAll(collection) {
+      // Check for hash
+      if (this._searchLoadedCollection[collection]) {
+        return Promise.resolve(false);
+      }
+
+      const dataService = this._instance.dataService(collection);
+      if (!dataService) {
+        return Promise.reject(new Error(`Unable to find data service ${collection}`));
+      }
+
+      this._searchLoadedCollection[collection] = true;
+
+      return dataService.getAllEntities();
+    }
+
+  searchOnce(collection, query, limit = null) {
+    // Check for hash
+    const hash = this._hashCollectionQuery(collection, query);
+    if (this._searchHashMap[hash]) {
+      return Promise.resolve(false);
+    }
+
+    return this.search(collection, query, limit)
+      .then((res) => {
+        this._searchHashMap[hash] = true;
+        return res;
+      });
+  }
+  
+  search(collection, query, limit = null) {
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) {
+      return Promise.reject(new Error(`Unable to find data service ${collection}`));
+    }
+
+    return dataService.search(query);
+  }
+
+  _hashCollectionQuery(collection, object) {
+    const str = collection + JSON.stringify(object);
+
+    var hash = 0;
+    if (str.length == 0) {
+        return hash;
+    }
+    for (var i = 0; i < str.length; i++) {
+        var char = str.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+
+    return hash;
+  }
+}
+export const Buttress = new ButtressInterface();
+
+export default class ButtressDb extends PolymerElement {
   static get is() { return 'buttress-db'; }
 
   static get template() {
@@ -45,6 +152,7 @@ export class ButtressDb extends PolymerElement {
           priority="[[item.priority]]",
           core="[[item.core]]",
           logging="[[logging]]",
+          load-on-startup="[[item.loadOnStartup]]",
           auto-load>
         </buttress-db-data-service>
       </template>
@@ -86,7 +194,6 @@ export class ButtressDb extends PolymerElement {
         value: function() {
           return {
             loaded: false,
-            unpacking: false,
             current: 0,
             total: 0
           }
@@ -102,27 +209,13 @@ export class ButtressDb extends PolymerElement {
         notify: true,
       },
 
-      __maxConcurrentRequests: {
-        type: Number,
-        value: 4
-      },
       rqSchemaParams: {
         type: Object
       },
 
-      dbSchema: {
-        type: Array,
-        value: function() {
-          return [];
-        }
-      },
       db: {
         type: Object,
         value: function() {
-          // post: {
-          //   status: 'uninitialised',
-          //   data: [],
-          // }
           return {};
         },
         notify: true
@@ -137,12 +230,7 @@ export class ButtressDb extends PolymerElement {
         },
         notify: true
       },
-      coreCollections: {
-        type: Array,
-        value: function() {
-          return [];
-        },
-      },
+
       __collections: {
         type: Object,
         value: function() {
@@ -150,15 +238,12 @@ export class ButtressDb extends PolymerElement {
         },
         notify: true
       },
-      __services: {
+
+      loadOnStartup: {
         type: Array,
         value: function() {
           return [];
-        }
-      },
-      __numRequests: {
-        type: Number,
-        value: 0
+        },
       },
 
       settings: {
@@ -209,17 +294,19 @@ export class ButtressDb extends PolymerElement {
   static get observers() {
     return [
       '__tokenChanged(token, nonModuleDependencies.*)',
-      '__dbSchemaChanged(coreCollections, dbSchema.*)',
+      '__dbSchemaChanged(loadOnStartup, dbSchema.*)',
+      '__dbLoadingState(__collections.*)',
       '__settingChanged(settings.*)'
     ];
   }
   
   ready() {
     super.ready();
-    this.addEventListener('data-service-list', ev => this.__onDataLoaded(ev));
     this.addEventListener('data-service-ready', ev => this.__dataServiceReady(ev));
+
+    Buttress.bind(this);
   }
-  
+
   connectedCallback() {
     super.connectedCallback();
     const settings = this.get('settings');
@@ -289,20 +376,29 @@ export class ButtressDb extends PolymerElement {
   }
 
   __dataServiceReady(ev){
-    const collections = this.get('__collections');
+    const collectionIdx = this.get('__collections').findIndex((c) => c.name === ev.detail);
+    if (collectionIdx === -1) return;
 
-    this.push('__services', ev.detail);
+    this.set(`__collections.${collectionIdx}.ready`, true);
 
-    if (collections.length === this.get('__services.length')) {
-      this.set('loading.current', 0);
-      this.set('loading.total', this.get('__collections.length'));
-      this.__services.sort((a,b) => a.priority - b.priority);
-      for (let x=0; x < this.__maxConcurrentRequests; x++)
-        this.__onDataLoaded();
+    if (this.get('__collections').every((c) => c.ready)) {
+      const stack = this.get('__collections').map((c) => () => this.dataService(c.name).load());
+      this._loadDataService(stack)
+        .then(() => {
+          this.set('loaded', true);
+          this.set('loading.loaded', true);
+        });
     }
   }
 
+  __dbLoadingState(cr) {
+    if (!cr || !cr.path.match(/__collections.\d.loaded/)) return;
+    this.set('loading.current', this.get('__collections').filter((c) => c.loaded).length);
+    this.set('loading.percent', (this.get('loading.current') / this.get('loading.total')) * 100);
+  }
+
   __tokenChanged() {
+    const endpoint = this.get('endpoint');
     const token = this.get('token');
     const nonModuleDependencies = this.get('nonModuleDependencies');
     if (!token || nonModuleDependencies.some(d => d.loaded === false)){
@@ -310,37 +406,38 @@ export class ButtressDb extends PolymerElement {
     }
 
     // Fetch app schema using provided token
-    this.set('rqSchemaParams', {
-      urq: Date.now(),
-      token: token
-    });
-    this.$.schema.generateRequest();
-  }
+    return fetch(`${endpoint}/api/v1/app/schema?urq=${Date.now()}&token=${token}`, {
+      method: 'GET',
+      cache: 'no-cache',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((response) => {
+        console.log(response);
 
-  __dbSchemaError(ev) {
-    this.set('error', true);
-    this.set('lastError', ev);
+        if (response.ok) {
+          return response.json();
+        } else {
+          // Handle Buttress Error
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
+      })
+      .then((schema) => this.set('dbSchema', schema))
+      .catch((err) => {
+        // will only reject on network failure or if anything prevented the request from completing.
+        console.error(err);
+        this.set('error', true);
+        this.set('lastError', err);
+      });
   }
 
   __dbSchemaChanged() {
     const schema = this.get('dbSchema');
-    const coreCollections = this.get('coreCollections');
+    const loadOnStartup = this.get('loadOnStartup');
     if (!schema || schema.length < 1) return;
 
     AppDb.Schema.schema = schema;
-
-    coreCollections.forEach(collection => {
-      const key = Sugar.String.camelize(collection, false);
-      const idx = this.push('__collections', {
-        name: collection,
-        status: 'uninitialised',
-        priority: 1,
-        data: [],
-        core: true
-      }) - 1;
-      this.set(['db', key], this.get(['__collections', idx]));
-      this.linkPaths(['db', key], `__collections.${idx}`);
-    });
 
     // Generate db data map
     schema.forEach(s => {
@@ -350,13 +447,22 @@ export class ButtressDb extends PolymerElement {
         status: 'uninitialised',
         priority: 1,
         data: [],
-        core: false
+        core: false,
+        ready: false,
+        loaded: false,
+        loadOnStartup: (loadOnStartup.includes(s.name)) ? true : false,
       }) - 1;
+      this.unlinkPaths(['db', key]);
       this.set(['db', key], this.get(['__collections', idx]));
       this.linkPaths(['db', key], `__collections.${idx}`);
     });
 
+    this.set('loaded.loaded', false);
+    this.set('loading.current', 0);
+    this.set('loading.total', this.get('__collections.length'));
+
     if (this.get('__localDB')) {
+      console.log(this.get('__localDB'));
       const collections = [].concat(schema).map(c => Sugar.String.camelize(c.name, false));
       this.get('__localDB').init({
         task: 'init',
@@ -395,35 +501,27 @@ export class ButtressDb extends PolymerElement {
     }
   }
 
-  __onDataLoaded(ev) {
-    const services = this.get('__services');
-
-    // No check for network load
-    if (!this.get('settings.network_read')) {
-      if (this.get('logging')) console.warn('Data service disabled network call');
-      return;
+  _loadDataService(stack, limit = 4) {
+    const batchChain = [];
+  
+    const executeNext = (int) => {
+      if (stack.length < 1) return Promise.resolve();
+  
+      const next = stack.shift();
+      return next().then(() => executeNext(int));
+    };
+  
+    for (let i = 0; i < limit; i++) {
+      batchChain.push(executeNext(i));
     }
 
-    if (!ev && services.length > 0) {
-      services.shift().triggerGet();
-      this.__numRequests++;
-      return;
-    }
+    console.log(batchChain);
+  
+    return Promise.all(batchChain);
+  }
 
-    if (--this.__numRequests === 0) {
-      this.set('loaded', true);
-      this.set('loading.loaded', true);
-    }
-
-    this.set('loading.current', this.get('loading.total') - this.get('__services.length') );
-    this.set('loading.percent', (this.get('loading.current') / this.get('loading.total')) * 100);
-
-    if (!services.length) {
-      return;
-    }
-
-    services.shift().triggerGet();
-    this.__numRequests++;
+  dataService(collection) {
+    return this.shadowRoot.querySelector(`#${collection}`);
   }
 
   // Local Storage
