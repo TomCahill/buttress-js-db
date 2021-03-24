@@ -281,8 +281,8 @@ export default class ButtressDbDataService extends PolymerElement {
   getAllEntities(id) {
     return this.__generateListRequest();
   }
-  search(query) {
-    return this.__generateSearchRequest(query);
+  search(query, limit = 0, skip = 0) {
+    return this.__generateSearchRequest(query, limit, skip);
   }
 
   __generateListRequest() {
@@ -302,14 +302,18 @@ export default class ButtressDbDataService extends PolymerElement {
       method: 'GET'
     });
   }
-  __generateSearchRequest(query) {
+  __generateSearchRequest(query, limit = 0, skip = 0) {
     if (this.get('logging')) console.log(`get rq: ${query}`);
 
     return this.__queueRequest({
       type: 'search',
       url: this.vectorBaseUrl(),
       method: 'SEARCH',
-      body: query,
+      body: {
+        query,
+        limit,
+        skip,
+      },
     });
   }
   __generateRmRequest(entityId) {

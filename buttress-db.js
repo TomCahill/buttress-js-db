@@ -62,43 +62,43 @@ class ButtressInterface {
    * @param {string} collection
    * @return {promise} collection
    */
-     getAll(collection) {
-      // Check for hash
-      if (this._searchLoadedCollection[collection]) {
-        return Promise.resolve(false);
-      }
-
-      const dataService = this._instance.dataService(collection);
-      if (!dataService) {
-        return Promise.reject(new Error(`Unable to find data service ${collection}`));
-      }
-
-      this._searchLoadedCollection[collection] = true;
-
-      return dataService.getAllEntities();
+  getAll(collection) {
+    // Check for hash
+    if (this._searchLoadedCollection[collection]) {
+      return Promise.resolve(false);
     }
 
-  searchOnce(collection, query, limit = null) {
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) {
+      return Promise.reject(new Error(`Unable to find data service ${collection}`));
+    }
+
+    this._searchLoadedCollection[collection] = true;
+
+    return dataService.getAllEntities();
+  }
+
+  searchOnce(collection, query, limit, skip) {
     // Check for hash
     const hash = this._hashCollectionQuery(collection, query);
     if (this._searchHashMap[hash]) {
       return Promise.resolve(false);
     }
 
-    return this.search(collection, query, limit)
+    return this.search(collection, query, limit, skip)
       .then((res) => {
         this._searchHashMap[hash] = true;
         return res;
       });
   }
   
-  search(collection, query, limit = null) {
+  search(collection, query, limit, skip) {
     const dataService = this._instance.dataService(collection);
     if (!dataService) {
       return Promise.reject(new Error(`Unable to find data service ${collection}`));
     }
 
-    return dataService.search(query);
+    return dataService.search(query, limit, skip);
   }
 
   _hashCollectionQuery(collection, object) {
