@@ -281,8 +281,11 @@ export default class ButtressDbDataService extends PolymerElement {
   getAllEntities(id) {
     return this.__generateListRequest();
   }
-  search(query, limit = 0, skip = 0) {
-    return this.__generateSearchRequest(query, limit, skip);
+  search(query, limit = 0, skip = 0, sort) {
+    return this.__generateSearchRequest(query, limit, skip, sort);
+  }
+  count(query) {
+    return this.__generateCountRequest(query);
   }
 
   __generateListRequest() {
@@ -302,7 +305,7 @@ export default class ButtressDbDataService extends PolymerElement {
       method: 'GET'
     });
   }
-  __generateSearchRequest(query, limit = 0, skip = 0) {
+  __generateSearchRequest(query, limit = 0, skip = 0, sort) {
     if (this.get('logging')) console.log(`get rq: ${query}`);
 
     return this.__queueRequest({
@@ -313,6 +316,17 @@ export default class ButtressDbDataService extends PolymerElement {
         query,
         limit,
         skip,
+        sort
+      },
+    });
+  }
+  __generateCountRequest(query) {
+    return this.__queueRequest({
+      type: 'count',
+      url: `${this.vectorBaseUrl()}/count`,
+      method: 'SEARCH',
+      body: {
+        query,
       },
     });
   }
@@ -439,7 +453,7 @@ export default class ButtressDbDataService extends PolymerElement {
     }
 
     this.status = 'done';
-    if (rq.resolve) rq.resolve();
+    if (rq.resolve) rq.resolve(response);
     this.__updateQueue();
   }
 

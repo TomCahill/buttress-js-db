@@ -92,13 +92,22 @@ class ButtressInterface {
       });
   }
   
-  search(collection, query, limit, skip) {
+  search(collection, query, limit, skip, sort) {
     const dataService = this._instance.dataService(collection);
     if (!dataService) {
       return Promise.reject(new Error(`Unable to find data service ${collection}`));
     }
 
-    return dataService.search(query, limit, skip);
+    return dataService.search(query, limit, skip, sort);
+  }
+
+  count(collection, query) {
+    const dataService = this._instance.dataService(collection);
+    if (!dataService) {
+      return Promise.reject(new Error(`Unable to find data service ${collection}`));
+    }
+
+    return dataService.count(query);
   }
 
   _hashCollectionQuery(collection, object) {
