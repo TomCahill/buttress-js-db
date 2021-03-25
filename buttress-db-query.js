@@ -146,21 +146,33 @@ export class ButtressDbQuery extends PolymerElement {
     }
 
     if (this.get('query.__crPath') && this.get('dataPath')) {
-      let crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
-      if (crPath.indexOf('.') === 0) {
-        crPath = crPath.substring(1);
+      if (typeof this.get('query.__crPath') === 'string') {
+        let crPath = this.get('query.__crPath').replace(this.get('dataPath'), '').trim();
+        if (crPath.indexOf('.') === 0) {
+          crPath = crPath.substring(1);
+        }
+        if (crPath && this.get('_crPaths').indexOf(crPath) === -1) {
+          this.push('_crPaths', crPath);
+        }
+      } else if (Array.isArray(this.get('query.__crPath'))) {
+        this.get('query.__crPath').forEach((crPath) => {
+          crPath = crPath.replace(this.get('dataPath'), '').trim();
+          if (crPath.indexOf('.') === 0) {
+            crPath = crPath.substring(1);
+          }
+          if (crPath && this.get('_crPaths').indexOf(crPath) === -1) {
+            this.push('_crPaths', crPath);
+          }
+        })
       }
-      if (this.get('_crPaths').indexOf(crPath) !== -1) return;
-
-      this.push('_crPaths', crPath);
     }
 
     // Debounce the query till later
     this._queryDebouncer = Debouncer.debounce(this._queryDebouncer, timeOut.after(100), () => {
       return this.__query()
         .then(() => {
-          const crPaths = this.get('_crPaths');
-          if (!crPaths && crPaths.length < 1) return;
+          const crPaths = this.splice('_crPaths', 0, this.get('_crPaths.length'));
+          if (!crPaths || crPaths.length < 1) return;
 
           crPaths.forEach((crPath) => {
             const splitCRPath = crPath.split('.');
@@ -185,8 +197,6 @@ export class ButtressDbQuery extends PolymerElement {
               }
             }
           });
-
-          this.set('_crPaths', []);
         })
         .then(() => {
           this.set('loading', false);
