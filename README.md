@@ -1,6 +1,6 @@
 ## &lt;buttress-db&gt;
 
-### Version: 3.1.1
+### Version: 3.1.2
 
 A set of elements enabling realtime data handling from ButtressJS
 
