@@ -97,6 +97,12 @@ export class ButtressDbQuery extends PolymerElement {
         type: Boolean,
         value: false,
       },
+      _crPaths: {
+        type: Array,
+        value: function() {
+          return [];
+        },
+      },
 
       paused: {
         type: Boolean,
@@ -139,22 +145,36 @@ export class ButtressDbQuery extends PolymerElement {
       return;
     }
 
+    if (this.get('query.__crPath') && this.get('dataPath')) {
+      if (typeof this.get('query.__crPath') === 'string') {
+        let crPath = this.get('query.__crPath').replace(this.get('dataPath'), '').trim();
+        if (crPath.indexOf('.') === 0) {
+          crPath = crPath.substring(1);
+        }
+        if (crPath && this.get('_crPaths').indexOf(crPath) === -1) {
+          this.push('_crPaths', crPath);
+        }
+      } else if (Array.isArray(this.get('query.__crPath'))) {
+        this.get('query.__crPath').forEach((crPath) => {
+          crPath = crPath.replace(this.get('dataPath'), '').trim();
+          if (crPath.indexOf('.') === 0) {
+            crPath = crPath.substring(1);
+          }
+          if (crPath && this.get('_crPaths').indexOf(crPath) === -1) {
+            this.push('_crPaths', crPath);
+          }
+        })
+      }
+    }
+
     // Debounce the query till later
     this._queryDebouncer = Debouncer.debounce(this._queryDebouncer, timeOut.after(100), () => {
       return this.__query()
         .then(() => {
-          // If we have an update to a path notify straight away
-          let crPath = null;
-          if (this.get('query.__crPath') && this.get('dataPath')) {
-            // Fetch the change record path from the query if passed through
-            // remove the data path from the change record path
-            crPath = this.get('query.__crPath').replace(this.get('dataPath'), '');
-            if (crPath.indexOf('.') === 0) {
-              crPath = crPath.substring(1);
-            }
-          }
+          const crPaths = this.splice('_crPaths', 0, this.get('_crPaths.length'));
+          if (!crPaths || crPaths.length < 1) return;
 
-          if (crPath) {
+          crPaths.forEach((crPath) => {
             const splitCRPath = crPath.split('.');
             const docCRIdx = splitCRPath.shift();
             const docCRItem = doc.data[docCRIdx];
@@ -176,7 +196,7 @@ export class ButtressDbQuery extends PolymerElement {
                 this.notifyPath(`findOne.${splitCRPath.join('.')}`);
               }
             }
-          }
+          });
         })
         .then(() => {
           this.set('loading', false);
