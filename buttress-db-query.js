@@ -229,16 +229,27 @@ export class ButtressDbQuery extends PolymerElement {
 
     // query is against the data store, we should send the search query to buttress too
     if (isSourceStore && collection) {
+      const limit = (this.get('limit')) ? parseInt(this.get('limit')) : 0;
+      const skip = (this.get('limit') && this.get('page')) ? parseInt(this.get('limit')) * (parseInt(this.get('page')) - 1) : 0;
+
+      const sort = {};
+      if (this.get('sortPath')) {
+        sort[this.get('sortPath')] = (this.get('sortOrder') === 'ASC') ? 1 : -1;
+      }
+
       this._pendingButtress = true;
-      return Buttress.searchOnce(collection, this.query)
-        .then(() => this._pendingButtress = false)
-        .then(() => this._filterLocalData());
+      return Buttress.search(collection, this.query, limit, skip, sort)
+        .then(() => Buttress.count(collection, this.query))
+        .then((count) => {
+          this._pendingButtress = false;
+          return this._filterLocalData(count);
+        });
     }
 
     return this._filterLocalData();
   }
 
-  _filterLocalData() {
+  _filterLocalData(resultCount) {
     return new Promise(resolve => {
       if (this.logging) console.log(this.logLabel, 'silly', this.query);
 
@@ -256,9 +267,11 @@ export class ButtressDbQuery extends PolymerElement {
         data.sort((a, b) => this.__sort(a, b));
       }
 
+      const numResults = (resultCount) ? resultCount : data.length;
+      this.set('numResults', numResults);
+
       if (this.limit > 0) {
-        this.set('numPages', Math.ceil(data.length / this.limit));
-        this.set('numResults', data.length);
+        this.set('numPages', Math.ceil(numResults / this.limit));
         this.set('findAllUnpaged', data.concat([]));
 
         if (this.logging) console.log(this.logLabel, 'silly', `Page: ${this.page}, Limit ${this.limit}, NumPages: ${this.numPages}`);
