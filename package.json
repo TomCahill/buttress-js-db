@@ -28,7 +28,7 @@
     "sugar": "2.0.6"
   },
   "devDependencies": {
-    "@open-wc/testing": "^2.5.32",
+    "@open-wc/testing": "^2.5.33",
     "@open-wc/testing-karma": "^4.0.9",
     "@webcomponents/webcomponentsjs": "^2.4.4",
     "babel-eslint": "^10.1.0",
