@@ -224,7 +224,7 @@ export class ButtressDbQuery extends PolymerElement {
     }
     if (this._pendingButtress) {
       this._retryQuery = false;
-      return Promise.resolve(false);
+      return this._filterLocalData();
     }
 
     // query is against the data store, we should send the search query to buttress too
@@ -238,6 +238,8 @@ export class ButtressDbQuery extends PolymerElement {
       }
 
       this._pendingButtress = true;
+      this._filterLocalData();
+
       return Buttress.search(collection, this.query, limit, skip, sort)
         .then(() => Buttress.count(collection, this.query))
         .then((count) => {
