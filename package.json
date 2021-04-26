@@ -1,7 +1,7 @@
 {
   "name": "@buttress/buttress-db",
   "description": "A set of elements for Polymer 3 enabling realtime data handling from ButtressJS",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "author": "Lighten",
   "contributors": [
     "Chris Bates-Keegan <chris@wearelighten.co.uk>",
@@ -28,7 +28,7 @@
     "sugar": "2.0.6"
   },
   "devDependencies": {
-    "@open-wc/testing": "^2.5.32",
+    "@open-wc/testing": "^2.5.33",
     "@open-wc/testing-karma": "^4.0.9",
     "@webcomponents/webcomponentsjs": "^2.4.4",
     "babel-eslint": "^10.1.0",
