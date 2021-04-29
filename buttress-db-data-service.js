@@ -411,13 +411,25 @@ export default class ButtressDbDataService extends PolymerElement {
           return response.json();
         } else {
           // Handle Buttress Error
-          throw new Error(`${response.status}: ${response.statusText}`);
+          throw new Error(`DS ERROR [${rq.type}] ${response.status} ${rq.url} - ${response.statusText}`);
         }
       })
       .then((a) => this.__ajaxResponse(a))
       .catch((err) => {
         // will only reject on network failure or if anything prevented the request from completing.
         console.error(err);
+        this.dispatchEvent(new CustomEvent('bjs-ds-error', {
+          detail: {
+            error: err,
+            type: rq.type,
+            url: rq.url,
+            entityId: rq.entityId,
+            method: rq.method,
+            body,
+          },
+          bubbles: true,
+          composed: true,
+        }));
         if (rq.reject) rq.reject(err);
         this.status = 'error';
       });
