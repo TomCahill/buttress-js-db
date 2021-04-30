@@ -281,8 +281,8 @@ export default class ButtressDbDataService extends PolymerElement {
   getAllEntities(id) {
     return this.__generateListRequest();
   }
-  search(query, limit = 0, skip = 0, sort) {
-    return this.__generateSearchRequest(query, limit, skip, sort);
+  search(query, limit = 0, skip = 0, sort, project=null) {
+    return this.__generateSearchRequest(query, limit, skip, sort, project);
   }
   count(query) {
     return this.__generateCountRequest(query);
@@ -305,7 +305,7 @@ export default class ButtressDbDataService extends PolymerElement {
       method: 'GET'
     });
   }
-  __generateSearchRequest(query, limit = 0, skip = 0, sort) {
+  __generateSearchRequest(query, limit = 0, skip = 0, sort, project) {
     if (this.get('logging')) console.log(`get rq: ${query}`);
 
     return this.__queueRequest({
@@ -316,7 +316,8 @@ export default class ButtressDbDataService extends PolymerElement {
         query,
         limit,
         skip,
-        sort
+        sort,
+        project,
       },
     });
   }
@@ -495,6 +496,8 @@ export default class ButtressDbDataService extends PolymerElement {
 
     const missingEntites = entites.filter((entity) => this.data.findIndex((e) => e.id === entity.id) === -1);
     if (missingEntites.length < 1) return;
+
+    if (rq.body && rq.body.project) return;
 
     this.__internalChange__ = true;
     this.data = this.data.concat(missingEntites);
