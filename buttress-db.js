@@ -92,13 +92,13 @@ class ButtressInterface {
       });
   }
   
-  search(collection, query, limit, skip, sort) {
+  search(collection, query, limit, skip, sort, project) {
     const dataService = this._instance.dataService(collection);
     if (!dataService) {
       return Promise.reject(new Error(`Unable to find data service ${collection}`));
     }
 
-    return dataService.search(query, limit, skip, sort);
+    return dataService.search(query, limit, skip, sort, project);
   }
 
   count(collection, query) {
