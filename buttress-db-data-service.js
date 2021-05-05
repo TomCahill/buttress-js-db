@@ -434,6 +434,8 @@ export default class ButtressDbDataService extends PolymerElement {
         }));
         if (rq.reject) rq.reject(err);
         this.status = 'error';
+
+        this.__updateQueue();
       });
   }
 
