@@ -388,10 +388,12 @@ export default class ButtressDbDataService extends PolymerElement {
       return;
     }
 
-    this.__generateRequest(this.requestQueue[0]);
+    this.__generateRequest();
   }
 
-  __generateRequest(rq) {
+  __generateRequest() {
+    const rq = this.requestQueue.shift();
+
     const token = this.get('token');
     rq.response = null;
 
@@ -415,7 +417,7 @@ export default class ButtressDbDataService extends PolymerElement {
           throw new Error(`DS ERROR [${rq.type}] ${response.status} ${rq.url} - ${response.statusText}`);
         }
       })
-      .then((a) => this.__ajaxResponse(a))
+      .then((a) => this.__ajaxResponse(a, rq))
       .catch((err) => {
         // will only reject on network failure or if anything prevented the request from completing.
         console.error(err);
@@ -433,12 +435,12 @@ export default class ButtressDbDataService extends PolymerElement {
         }));
         if (rq.reject) rq.reject(err);
         this.status = 'error';
+
+        this.__updateQueue();
       });
   }
 
-  __ajaxResponse(response) {
-    let rq = this.requestQueue.shift();
-
+  __ajaxResponse(response, rq) {
     if (!rq) {
       if (this.get('logging')) console.log('warn', 'Response on an empty requestQueue!!!');
       return;
