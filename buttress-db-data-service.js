@@ -391,7 +391,7 @@ export default class ButtressDbDataService extends PolymerElement {
   }
 
   __generateRequest() {
-    rq = this.requestQueue.shift();
+    const rq = this.requestQueue.shift();
 
     const token = this.get('token');
     rq.response = null;
