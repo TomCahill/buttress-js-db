@@ -1,10 +1,12 @@
-import {ButtressDb} from '../buttress-db.js';
+import ButtressDb from '../buttress-db.js';
 import {AppDb} from '../buttress-db-schema.js';
+
+import chai from '@esm-bundle/chai';
 import {fixture, html, waitUntil} from '@open-wc/testing';
 
 const assert = chai.assert;
 
-suite('buttress-db', async () => {
+describe('buttress-db', async () => {
 
   const Schema = 'post';
 
@@ -14,24 +16,24 @@ suite('buttress-db', async () => {
 
   const element = /** @type {ButtressDb} */ (await fixture(html`
     <buttress-db
-      endpoint="http://test.buttressjs.com",
-      app-id="45tRsh1R0Vo80ANAAJEs8gFB5NNk4A14",
+      endpoint="https://test.local.buttressjs.com",
+      app-id="Q814lldQYVh5o0UAd1kRpwlkIVcZIw9N",
       api-path="bjs",
       user-id="1",
-      token="I8N9hRAZhcJZQB4kM41YIc8o11M5VpwYl1Qc" 
+      token="ddxpIdw1pQEhokFV05A9AoN5QplJMpBhsIkA" 
     ></buttress-db>
   `));
 
-  test('should be defined', () => {
+  it('should be defined', () => {
     assert.instanceOf(element, ButtressDb);
   });
 
-  test('should connect to buttress', async () => {
+  it('should connect to buttress', async () => {
     await waitUntil(() => element.loaded, `Slow load or unable to connect to Buttress ${element.endpoint}`);
     await waitUntil(() => element.io.connected, `Unable to connected to socket ${element.endpoint}`);
   });
 
-  test(`should add a new ${Schema} to the ${Schema}s collection`, async() => {
+  it(`should add a new ${Schema} to the ${Schema}s collection`, async() => {
     const entity = AppDb.Factory.create(`${Schema}s`);
     entity.content = entityOriginalContent;
 
@@ -54,7 +56,7 @@ suite('buttress-db', async () => {
     assert.lengthOf(element.db.post.data, collectionLength + 1);
   });
 
-  test(`should find & edit a Schema`, async() => {
+  it(`should find & edit a Schema`, async() => {
     // Find the entity we created in the collection
     const entityIdx = element.db.post.data.findIndex((b) => b.id === entityId);
     assert.isAbove(entityIdx, -1, `Unable to find post with id ${entityId}'`);
@@ -76,7 +78,7 @@ suite('buttress-db', async () => {
     assert.equal(element.db.post.data[entityIdx].content, entityNewContent);
   });
 
-  test(`should remove a ${Schema} from the collection`, async() => {
+  it(`should remove a ${Schema} from the collection`, async() => {
     // Find the post we created in the collection
     const entityIdx = element.db.post.data.findIndex((b) => b.id === entityId);
     assert.isAbove(entityIdx, -1, `Unable to find post with id ${entityId}'`);
