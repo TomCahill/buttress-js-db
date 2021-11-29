@@ -466,7 +466,7 @@ export default class ButtressDb extends PolymerElement {
       this.linkPaths(['db', key], `__collections.${idx}`);
     });
 
-    this.set('loaded.loaded', false);
+    this.set('loading.loaded', false);
     this.set('loading.current', 0);
     this.set('loading.total', this.get('__collections.length'));
 
