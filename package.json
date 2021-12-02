@@ -20,7 +20,7 @@
     "lint": "eslint '**/*.js'",
     "test": "web-test-runner test/**/*.test.js --node-resolve",
     "test:watch": "web-test-runner test/**/*.test.js --node-resolve --watch",
-    "start": "es-dev-server --app-index demo/index.html --node-resolve --open --watch"
+    "demo": "es-dev-server --app-index demo/index.html --node-resolve --open --watch"
   },
   "main": "buttress-db.js",
   "dependencies": {

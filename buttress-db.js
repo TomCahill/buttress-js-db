@@ -18,6 +18,10 @@ class ButtressInterface {
     this._searchHashMap = {};
   }
 
+  get AppDb() {
+    return AppDb;
+  }
+
   bind(instance) {
     this._instance = instance;
   }
@@ -38,6 +42,15 @@ class ButtressInterface {
    */
   setPath(...args) {
     return this._instance.set(...args);
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  pushPath(...args) {
+    return this._instance.push(...args);
   }
 
   /**
@@ -91,7 +104,7 @@ class ButtressInterface {
         return res;
       });
   }
-  
+
   search(collection, query, limit, skip, sort, project) {
     const dataService = this._instance.dataService(collection);
     if (!dataService) {
@@ -162,6 +175,7 @@ export default class ButtressDb extends PolymerElement {
           core="[[item.core]]",
           logging="[[logging]]",
           load-on-startup="[[item.loadOnStartup]]",
+          settings="[[settings]]",
           auto-load>
         </buttress-db-data-service>
       </template>
@@ -266,6 +280,8 @@ export default class ButtressDb extends PolymerElement {
             local_read: false,
             network_sync: false,
             network_read: true,
+            bundled_requests: true,
+            bundled_requests_chunk: 100,
           };
         }
       },
