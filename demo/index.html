@@ -93,6 +93,8 @@
             <button on-click="_doManyPostAdditions">Many Additions</button>
             <button on-click="_doPostModification">Single Modification</button>
             <button on-click="_doManyPostModifications">Many Modification</button>
+
+            <button on-click="_toggleBundling">Bundling: [[dbSettings.bundled_requests]] </button>
             <div class="vertical-section-container centered">
               <h1>Basic buttress-db demo: [[token]]</h1>
               <pre>
@@ -167,6 +169,10 @@
         }
         _doManyPostModifications() {
           this._doPostModification(100);
+        }
+
+        _toggleBundling() {
+          this.set('dbSettings.bundled_requests', !this.get('dbSettings.bundled_requests'));
         }
 
         stringify(object) {
