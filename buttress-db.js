@@ -3,7 +3,7 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element';
 import './buttress-db-data-service.js';
 import './buttress-db-realtime-handler.js';
 
-import './libs/fingerprint2.js';
+import FingerprintJS from './libs/fingerprint.js';
 
 import { AppDb } from './buttress-db-schema.js';
 import Worker from './buttress-db-worker.js';
@@ -16,6 +16,10 @@ class ButtressInterface {
 
     this._searchLoadedCollection = {};
     this._searchHashMap = {};
+  }
+
+  get AppDb() {
+    return AppDb;
   }
 
   bind(instance) {
@@ -38,6 +42,15 @@ class ButtressInterface {
    */
   setPath(...args) {
     return this._instance.set(...args);
+  }
+
+  /**
+   * Proxy through to Polymer property-effects
+   * @param  {...any} args
+   * @return {*}
+   */
+  pushPath(...args) {
+    return this._instance.push(...args);
   }
 
   /**
@@ -91,7 +104,7 @@ class ButtressInterface {
         return res;
       });
   }
-  
+
   search(collection, query, limit, skip, sort, project) {
     const dataService = this._instance.dataService(collection);
     if (!dataService) {
@@ -162,6 +175,7 @@ export default class ButtressDb extends PolymerElement {
           core="[[item.core]]",
           logging="[[logging]]",
           load-on-startup="[[item.loadOnStartup]]",
+          settings="[[settings]]",
           auto-load>
         </buttress-db-data-service>
       </template>
@@ -266,6 +280,8 @@ export default class ButtressDb extends PolymerElement {
             local_read: false,
             network_sync: false,
             network_read: true,
+            bundled_requests: true,
+            bundled_requests_chunk: 100,
           };
         }
       },
@@ -320,20 +336,20 @@ export default class ButtressDb extends PolymerElement {
     super.connectedCallback();
     const settings = this.get('settings');
 
-    if (Fingerprint2) {
+    if (FingerprintJS) {
       const depIdx = this.get('nonModuleDependencies').findIndex(d => d.name === 'fingerprint');
       this.set(`nonModuleDependencies.${depIdx}.loaded`, true);
 
-      Fingerprint2.get(components => {
-        var values = components.map(function (component) { return component.value });
-        var murmur = Fingerprint2.x64hash128(values.join(''), 31);
-        let nibbles = murmur.match(/.{1}/g).map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0);
-        let id = 0;
-        nibbles.forEach((n,idx) => id |= n << idx);
-        AppDb.Fingerpint.machineId = id;
-        AppDb.Fingerpint.processId = Math.floor(Math.random() * 100000) % 0xFFFF;
-        AppDb.Fingerpint.inc = Math.floor(Math.random() * 65535) % 0xFFFF;
-      });
+      FingerprintJS.load()
+        .then((fp) => fp.get())
+        .then((result) => {
+          AppDb.Fingerpint.machineId = result.visitorId
+            .match(/.{1}/g)
+            .map(n => parseInt(`0x${n}`, 16) > 7 ? 1 : 0)
+            .reduce((prev, n,idx) => prev |= n << idx);
+          AppDb.Fingerpint.processId = Math.floor(Math.random() * 100000) % 0xFFFF;
+          AppDb.Fingerpint.inc = Math.floor(Math.random() * 65535) % 0xFFFF;
+        });
     } else {
       const depIdx = this.get('nonModuleDependencies').findIndex(d => d.name === 'fingerprint');
       this.set(`nonModuleDependencies.${depIdx}.error`, true);

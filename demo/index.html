@@ -14,7 +14,7 @@
     <script type="module">
       import {PolymerElement, html} from '@polymer/polymer/polymer-element.js';
       import '@polymer/polymer/lib/elements/dom-repeat.js';
-      import '../buttress-db.js';
+      import {Buttress} from '../buttress-db.js';
 
       class DemoElement extends PolymerElement {
         static get is() { return `buttress-demo-element`; }
@@ -35,7 +35,8 @@
                   },
                   {
                     "value" : "th1E8JMckkMFdBgpUMhptpIsB8ZZQVxNJNMl",
-                    "role" : "admin.super"
+                    "role" : "admin.super",
+                    "userId": "61a4eb225ce292b9f6775479"
                   }
                 ]
               }
@@ -46,6 +47,12 @@
             dbSettings: Object,
             db: Object,
             io: Object,
+            loadOnStartup: {
+              type: Array,
+              value: function() {
+                return ["post"]
+              }
+            }
           };
         }
         static get template() {
@@ -66,12 +73,13 @@
               endpoint="https://test.local.buttressjs.com",
               app-id="45tRsh1R0Vo80ANAAJEs8gFB5NNk4A14",
               api-path="bjs",
-              user-id="1",
+              user-id="[[tokens.2.userId]]",
               token="[[token]]",
               loaded="{{dbLoaded}}",
               loading="{{dbLoading}}",
               error="{{dbError}}",
               settings="{{dbSettings}}",
+              load-on-startup="[[loadOnStartup]]",
               db="{{db}}",
               io="{{io}}",
               logging
@@ -81,8 +89,17 @@
                 <option value="[[item.value]]">[[item.role]]</option>
               </template>
             </select>
+            <button on-click="_doPostAddition">Single Addition</button>
+            <button on-click="_doManyPostAdditions">Many Additions</button>
+            <button on-click="_doPostModification">Single Modification</button>
+            <button on-click="_doManyPostModifications">Many Modification</button>
+
+            <button on-click="_toggleBundling">Bundling: [[dbSettings.bundled_requests]] </button>
             <div class="vertical-section-container centered">
               <h1>Basic buttress-db demo: [[token]]</h1>
+              <pre>
+                Posts Count: [[db.post.data.length]]
+              </pre>
               <h3>Properties</h3>
               <div class="props">
                 <pre class="prop"><b>loaded</b>: [[dbLoaded]]</pre>
@@ -105,6 +122,59 @@
           this.set('token', this.$.selectToken.value);
           localStorage.setItem('token', this.$.selectToken.value);
         }
+
+        _doPostAddition(n) {
+          if (typeof n !== "number") n = 1;
+
+          const dummyText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.` +
+                            `Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure` +
+                            `dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,` +
+                            `sunt in culpa qui officia deserunt mollit anim id est laborum.`;
+
+          for (let x = 0; x < n; x++) {
+            const post = Buttress.AppDb.Factory.create('posts');
+
+            post.content = dummyText
+
+            Buttress.pushPath('db.post.data', post);
+          }
+        }
+        _doManyPostAdditions() {
+          this._doPostAddition(100);
+        }
+
+        _doPostModification(n) {
+          if (typeof n !== "number") n = 1;
+
+          // const rdmBool = () => Math.round(Math.random() * 1) === 1;
+          const rdmBool = () => true;
+
+          for (let x = 0; x < n; x++) {
+            const randomIdx = Math.floor(Math.random() * Buttress.getPath('db.post.data.length'));
+
+            // const post = Buttress.AppDb.Factory.create('posts');
+
+            // post.content = dummyText
+            if (rdmBool()) {
+              Buttress.setPath(`db.post.data.${randomIdx}.kudos`, Math.round(Math.random() * 999));
+            }
+            if (rdmBool()) {
+              Buttress.setPath(`db.post.data.${randomIdx}.views`, Math.round(Math.random() * 999));
+            }
+
+            // Buttress.setPath(`db.post.data.${randomIdx}.kudos`, post);
+            // Buttress.setPath(`db.post.data.${randomIdx}.kudos`, post);
+            // Buttress.setPath(`db.post.data.${randomIdx}.kudos`, post);
+          }
+        }
+        _doManyPostModifications() {
+          this._doPostModification(100);
+        }
+
+        _toggleBundling() {
+          this.set('dbSettings.bundled_requests', !this.get('dbSettings.bundled_requests'));
+        }
+
         stringify(object) {
           return JSON.stringify(object, null, 4);
         }

@@ -1,4 +1,6 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
+import { timeOut } from '@polymer/polymer/lib/utils/async.js';
+import { Debouncer } from '@polymer/polymer/lib/utils/debounce.js';
 
 import { AppDb } from './buttress-db-schema.js';
 
@@ -15,6 +17,7 @@ export default class ButtressDbDataService extends PolymerElement {
       token: String,
       endpoint: String,
       apiPath: String,
+      settings: Object,
 
       status: {
         type: String,
@@ -66,6 +69,12 @@ export default class ButtressDbDataService extends PolymerElement {
       '__dataSplices(data.splices)',
       '__dataChanges(data.*)'
     ];
+  }
+
+  static get constants() {
+    return {
+      BUNDLED_REQUESTS_TYPES: ['add', 'update'],
+    };
   }
 
   connectedCallback() {
@@ -387,19 +396,60 @@ export default class ButtressDbDataService extends PolymerElement {
     if (this.status === 'working') {
       return;
     }
-
-    this.__generateRequest();
+    
+    this._dataServiceDebouncer = Debouncer.debounce(
+      this._dataServiceDebouncer,
+      timeOut.after((this.get('settings.bundled_requests')) ? 500 : 1),
+      () => this.__reduceRequests()
+    );
   }
 
-  __generateRequest() {
-    const rq = this.requestQueue.shift();
-
-    const token = this.get('token');
-    rq.response = null;
-
+  __reduceRequests() {
+    const settings = this.get('settings');
     this.status = 'working';
 
-    const body = (rq.body) ? JSON.stringify(rq.body) : null;
+    let request = this.requestQueue.shift();
+
+    // Attempt to reduce matching request types down to a single request
+    if (settings.bundled_requests && ButtressDbDataService.constants.BUNDLED_REQUESTS_TYPES.includes(request.type)) {
+      if (this.get('logging')) console.log('bulk compatible request, trying to chunk:', request.type);
+      const requests = [
+        request,
+        ...this.requestQueue.filter((r) => r.type === request.type)
+          .splice(0, settings.bundled_requests_chunk - 1)
+      ];
+
+      if (requests.length > 1) {
+        this.requestQueue = this.requestQueue.filter((r) => !requests.includes(r));
+
+        request = {
+          type: `bulk/${request.type}`,
+          url: `${this.vectorBaseUrl()}/bulk/${request.type}`,
+          entityId: -1,
+          method: 'POST',
+          contentType: 'application/json',
+          body: null,
+          dependentRequests: requests,
+        };
+
+        if (request.type === 'bulk/update') {
+          request.body = requests.map((rq) => {
+            return {
+              id: rq.entityId,
+              body: rq.body
+            };
+          });
+        } else {
+          request.body = requests.map((rq) => rq.body);
+        }
+      }
+    }
+
+    return this.__generateRequest(request);
+  }
+
+  __generateRequest(rq) {
+    const token = this.get('token');
 
     return fetch(`${rq.url}?urq=${Date.now()}&token=${token}`, {
       method: rq.method,
@@ -407,7 +457,7 @@ export default class ButtressDbDataService extends PolymerElement {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: body,
+      body: (rq.body) ? JSON.stringify(rq.body) : null,
     })
       .then((response) => {
         if (response.ok) {
@@ -434,6 +484,7 @@ export default class ButtressDbDataService extends PolymerElement {
           composed: true,
         }));
         if (rq.reject) rq.reject(err);
+        if (rq.dependentRequests) rq.dependentRequests.forEach((rq) => rq.reject(err));
         this.status = 'error';
 
         this.__updateQueue();
@@ -469,6 +520,7 @@ export default class ButtressDbDataService extends PolymerElement {
 
     this.status = 'done';
     if (rq.resolve) rq.resolve(response);
+    if (rq.dependentRequests) rq.dependentRequests.forEach((rq) => rq.resolve(response));
     this.__updateQueue();
   }
 
