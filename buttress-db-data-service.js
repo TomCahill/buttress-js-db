@@ -396,8 +396,12 @@ export default class ButtressDbDataService extends PolymerElement {
     if (this.status === 'working') {
       return;
     }
-
-    this._dataServiceDebouncer = Debouncer.debounce(this._dataServiceDebouncer, timeOut.after(500), () => this.__reduceRequests());
+    
+    this._dataServiceDebouncer = Debouncer.debounce(
+      this._dataServiceDebouncer,
+      timeOut.after((this.get('settings.bundled_requests')) ? 500 : 1),
+      () => this.__reduceRequests()
+    );
   }
 
   __reduceRequests() {
