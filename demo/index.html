@@ -20,33 +20,27 @@
         static get is() { return `buttress-demo-element`; }
         static get properties () {
           return {
-            token: String,
-            tokens: {
-              type: Array,
-              value: function() {
-                return [
-                  {
-                    "value" : "R11Vpp8IVYkAx5Jpp9R4l50UVxcBtoF80YgM",
-                    "role" : "public"
-                  },
-                  {
-                    "value" : "ddxpIdw1pQEhokFV05A9AoN5QplJMpBhsIkA",
-                    "role" : "user.member"
-                  },
-                  {
-                    "value" : "th1E8JMckkMFdBgpUMhptpIsB8ZZQVxNJNMl",
-                    "role" : "admin.super",
-                    "userId": "61a4eb225ce292b9f6775479"
-                  }
-                ]
-              }
+            apiEndpoint: {
+              type: String,
+              value: 'https://test.local.buttressjs.com',
             },
+            apiAppId: String,
+            apiPath: {
+              type: String,
+              value: 'bjs',
+            },
+
+            token: String,
+            userId: String,
+
             dbLoaded: Boolean,
             dbLoading: Object,
             dbError: Boolean,
             dbSettings: Object,
+
             db: Object,
             io: Object,
+
             loadOnStartup: {
               type: Array,
               value: function() {
@@ -67,13 +61,34 @@
               .props .prop {
                 margin-left: 0.5rem;
               }
+
+              .ph-1 {
+                padding: 0 1rem;
+              }
+
+              .flex {
+                display: flex;
+              }
+              .horizontal {
+                flex-direction: row;
+              }
+              .vertical {
+                flex-direction: column;
+              }
+              .wrap {
+                flex-wrap: wrap;
+              }
+              .flow {
+                flex: 1;
+              }
+
             </style>
             <buttress-db
               id="bjs"
-              endpoint="https://test.local.buttressjs.com",
-              app-id="45tRsh1R0Vo80ANAAJEs8gFB5NNk4A14",
-              api-path="bjs",
-              user-id="[[tokens.2.userId]]",
+              endpoint="[[apiEndpoint]]",
+              app-id="[[apiAppId]]",
+              api-path="[[apiPath]]",
+              user-id="[[userId]]",
               token="[[token]]",
               loaded="{{dbLoaded}}",
               loading="{{dbLoading}}",
@@ -84,29 +99,43 @@
               io="{{io}}",
               logging
             ></buttress-db>
-            <select id="selectToken" on-change="_changeToken">
-              <template is="dom-repeat" items="[[tokens]]">
-                <option value="[[item.value]]">[[item.role]]</option>
-              </template>
-            </select>
+
             <button on-click="_doPostAddition">Single Addition</button>
             <button on-click="_doManyPostAdditions">Many Additions</button>
             <button on-click="_doPostModification">Single Modification</button>
             <button on-click="_doManyPostModifications">Many Modification</button>
 
             <button on-click="_toggleBundling">Bundling: [[dbSettings.bundled_requests]] </button>
+            <div class="flex horizontal">
+              <div class="flow vertical flex ph-1">
+                <h4>Details</h4>
+                <input name="apiEndpoint" placeholder="API Endpoint" value="[[apiEndpoint]]" />
+                <input name="apiAppId" placeholder="API App Id" value="[[apiAppId]]" />
+                <input name="apiPath" placeholder="API Path" value="[[apiPath]]" />
+                <input name="userId" placeholder="User Id" value="[[userId]]" />
+                <input name="token" placeholder="Token" value="[[token]]" />
+                <input type="submit" value="Save"/>
+              </div>
+
+              <div class="flow vertical flex ph-1">
+                <h4>Actions</h4>
+                <button on-click="_doPostAddition">Single Addition</button>
+                <button on-click="_doManyPostAdditions">Many Additions</button>
+                <button on-click="_doPostModification">Single Modification</button>
+                <button on-click="_doManyPostModifications">Many Modification</button>
+              </div>
+            </div>
             <div class="vertical-section-container centered">
               <h1>Basic buttress-db demo: [[token]]</h1>
               <pre>
                 Posts Count: [[db.post.data.length]]
               </pre>
               <h3>Properties</h3>
-              <div class="props">
+              <div class="props vertical">
                 <pre class="prop"><b>loaded</b>: [[dbLoaded]]</pre>
                 <pre class="prop"><b>loading</b>: [[stringify(dbLoading, dbLoading.*)]]</pre>
                 <pre class="prop"><b>error</b>: [[dbError]]</pre>
                 <pre class="prop"><b>settings</b>: [[stringify(dbSettings, dbSettings.*)]]</pre>
-                <pre class="prop"><b>db</b>: [[stringify(db, db.*)]]</pre>
                 <pre class="prop"><b>io</b>: [[stringify(io, io.*)]]</pre>
               </pre>
             </div>
