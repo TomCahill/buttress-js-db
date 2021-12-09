@@ -109,12 +109,12 @@
             <div class="flex horizontal">
               <div class="flow vertical flex ph-1">
                 <h4>Details</h4>
-                <input name="apiEndpoint" placeholder="API Endpoint" value="[[apiEndpoint]]" />
-                <input name="apiAppId" placeholder="API App Id" value="[[apiAppId]]" />
-                <input name="apiPath" placeholder="API Path" value="[[apiPath]]" />
-                <input name="userId" placeholder="User Id" value="[[userId]]" />
-                <input name="token" placeholder="Token" value="[[token]]" />
-                <input type="submit" value="Save"/>
+                <input id="apiEndpoint" placeholder="API Endpoint" value="[[apiEndpoint]]" />
+                <input id="apiAppId" placeholder="API App Id" value="[[apiAppId]]" />
+                <input id="apiPath" placeholder="API Path" value="[[apiPath]]" />
+                <input id="userId" placeholder="User Id" value="[[userId]]" />
+                <input id="token" placeholder="Token" value="[[token]]" />
+                <input type="submit" value="Save" on-click="_doSubmit"/>
               </div>
 
               <div class="flow vertical flex ph-1">
@@ -143,10 +143,24 @@
         }
         ready() {
           super.ready();
-          if (window.localStorage.getItem('token')) {
-            this.set('token', window.localStorage.getItem('token'));
+
+          this._localRead('apiEndpoint');
+          this._localRead('apiAppId');
+          this._localRead('apiPath');
+          this._localRead('userId');
+          this._localRead('token');
+        }
+
+        _localRead(key) {
+          if (window.localStorage.getItem(key)) {
+            this.set(key, window.localStorage.getItem(key));
           }
         }
+        _localWrite(key, value) {
+          window.localStorage.setItem(key, value);
+          this.set(key, value);
+        }
+
         _changeToken(ev) {
           this.set('token', this.$.selectToken.value);
           localStorage.setItem('token', this.$.selectToken.value);
@@ -198,6 +212,13 @@
         }
         _doManyPostModifications() {
           this._doPostModification(100);
+        }
+        _doSubmit() {
+          this._localWrite('apiEndpoint', this.$.apiEndpoint.value);
+          this._localWrite('apiAppId', this.$.apiAppId.value);
+          this._localWrite('apiPath', this.$.apiPath.value);
+          this._localWrite('userId', this.$.userId.value);
+          this._localWrite('token', this.$.token.value);
         }
 
         _toggleBundling() {
