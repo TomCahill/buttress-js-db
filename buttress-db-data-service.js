@@ -408,16 +408,16 @@ export default class ButtressDbDataService extends PolymerElement {
     const settings = this.get('settings');
     this.status = 'working';
 
-    // Possible race condition if you between updates & adds, if a update gets in
-    // before an add it will try to grab future updates into it's request see below:
-    // - Update to object A
-    // - Add Object B
-    // - Update Object B
+    let request = null;
 
-    // process 'add's before updates,
-    // break chunk if we hit an 'add' between updates,
-    // add batch/ endpoint instead so we can just bulk process requests instead of having bulk/* endpoints
-    let request = this.requestQueue.shift();
+    const requestIdx = this.requestQueue.findIndex((r) => r.type === 'add' || r.type === 'delete');
+    if (requestIdx !== -1) {
+      [request] = this.requestQueue.splice(requestIdx, 1);
+    }
+
+    if (!request) {
+      request = this.requestQueue.shift();
+    }
 
     // Attempt to reduce matching request types down to a single request
     if (settings.bundled_requests && ButtressDbDataService.constants.BUNDLED_REQUESTS_TYPES.includes(request.type)) {
