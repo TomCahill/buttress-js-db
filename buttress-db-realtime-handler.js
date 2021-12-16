@@ -1,4 +1,5 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
+import { Debouncer } from '@polymer/polymer/lib/utils/debounce.js';
 
 import './buttress-db-socket-io.js';
 
@@ -17,8 +18,11 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
         endpoint="[[endpoint]]",
         app-id="[[appId]]",
         token="[[token]]",
-        connected="{{connected}}",
-        on-rx-event="__handleRxEvent"
+        logging="[[logging]]",
+        settings="[[settings]]",
+        is-connected="{{connected}}",
+        on-rx-event="_handleRxEvent"
+        on-reconnected="_handleReconnected"
       ></buttress-db-socket-io>
     `;
   }
@@ -50,6 +54,20 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
         type: Number,
         value: null
       },
+      lastRxDate: {
+        type: Object,
+      },
+
+      _rxQueue: {
+        type: Array,
+        value: function() {
+          return [];
+        }
+      },
+      _pauseQueue: {
+        type: Boolean,
+        value: false,
+      },
 
       db: {
         type: Object,
@@ -58,17 +76,13 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
     };
   }
 
-  __handleRxEvent(ev) {
+  _handleRxEvent(ev) {
     const userId = this.get('userId');
     const lastSequence = this.get('lastSequence');
     const type = ev.detail.type;
 
-    if (this.get('logging')) console.log('silly', '__handleRxEvent', ev.detail);
+    if (this.get('logging')) console.log('silly', '_handleRxEvent', ev.detail);
 
-    if (type !== 'db-activity') {
-      return;
-    }
-    
     const sequence = ev.detail.payload.sequence;
     const data = ev.detail.payload.data;
 
@@ -99,10 +113,42 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
     
     if (this.get('logging')) console.log('USERID', userId, data.user);
     if (userId !== data.user) {
-      this.__parsePayload(data);
+      this._rxQueue.push(data);
+      this._processRxQueue();
     }
-    
+
     this.set('lastSequence', sequence);
+  }
+
+  resynced() {
+    this._pauseQueue = false;
+  }
+
+  _handleReconnected(ev) {
+    // Buffer up rx & send a request to catch up to the data services
+    this._pauseQueue = true;
+
+    console.log(this.get('connected'));
+
+    this.dispatchEvent(new CustomEvent('reconnected', {
+      detail: ev.detail,
+      bubbles: true
+    }));
+  }
+
+  _processRxQueue() {
+    if (this._rxQueue.length < 1) return;
+
+    const rxData = this._rxQueue.shift();
+
+    console.log('silly', '_processRxQueue processing paused', this._pauseQueue)
+
+    // We're pausing the processing of the queue so we can catch up with the latest data
+    if (this._pauseQueue) return;
+
+    console.log(rxData);
+
+    this.__parsePayload(rxData);
   }
 
   __parsePayload(payload) {
@@ -155,6 +201,8 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
         }
       } break;
     }
+
+    this._processRxQueue();
   }
 
   __handlePostCommon(path, params, payload) {

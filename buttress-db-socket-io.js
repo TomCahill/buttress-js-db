@@ -21,6 +21,8 @@ export class ButtressDbSocketIo extends PolymerElement {
       endpoint: String,
       appId: String,
 
+      settings: Object,
+
       logging: {
         type: Boolean,
         value: false
@@ -31,37 +33,27 @@ export class ButtressDbSocketIo extends PolymerElement {
         value: false
       },
 
-      connected: {
+      _hasMadeConnection: {
+        type: Boolean,
+        value: false
+      },
+
+      isConnected: {
         type: Boolean,
         notify: true,
         value: false
       },
-      rxEvents: {
-        type: Array,
-        value: function() {
-          return [
-            'db-activity'
-          ];
-        }
-      },
-      tx: {
-        type: Array,
-        value: function() {
-          return [];
-        }
-      },
-      rx: {
-        type: Array,
-        value: function() {
-          return [];
-        }
+
+      disconnectedAt: {
+        type: Object,
+        value: function() { return new Date(); }
       }
     };
   }
   static get observers() {
     return [
-      '__tokenChanged(token, _scriptDependencyLoaded)',
-      '__tx(tx.splices)'
+      '__pauseRealtime(settings.pause_realtime)',
+      '__tokenChanged(token, _scriptDependencyLoaded)'
     ]
   }
 
@@ -87,14 +79,23 @@ export class ButtressDbSocketIo extends PolymerElement {
     this.connect();
   }
 
+  __pauseRealtime(val) {
+    if (!this.socket) return;
+
+    if (val) {
+      this.socket.disconnect();
+    } else {
+      this.socket.connect();
+    }
+  }
+
   connect() {
     const token = this.get('token');
     const appPublicId = this.get('appId');
 
-    let uri = `${this.endpoint}`;
-    if (appPublicId) {
-      uri = `${this.endpoint}/${appPublicId}`;
-    }
+    if (!token) return;
+
+    const uri = (appPublicId) ? `${this.endpoint}/${appPublicId}` : `${this.endpoint}`;
 
     if (this.get('logging')) console.log('debug', 'Attempting Socket connection', uri);
     try {
@@ -103,54 +104,43 @@ export class ButtressDbSocketIo extends PolymerElement {
           token: token
         }
       });
-      this.socket.on('connect',() => {
-        this.set('connected', true);
-        if (this.get('logging')) console.log('debug', 'Connected');
-        this.__configureRxEvents();
-      });
-      this.socket.on('disconnect',() => {
-        this.set('connected', false);
-      });
-    } catch (err) {
-      this.set('connected', false);
-      if (this.get('logging')) console.log('err', err);
-      this.dispatchEvent(new CustomEvent('error', {detail: err, bubbles: true, composed: true}));
-    }
-  }
 
-  __configureRxEvents() {
-    this.rxEvents.forEach(ev => {
-      if (this.get('logging')) console.log('debug', '__configureRxEvents', ev);
-      this.socket.on(ev, (data) => {
-        if (this.get('logging')) console.log('debug', 'rxEvents:');
-        if (this.get('logging')) console.log('debug', data);
+      this.socket.on('connect',() => {
+        if (this.get('logging')) console.log('debug', `Connected to ${uri}`);
+        this.set('isConnected', true);
+
+        // If we've already made a connection lets dispatch that is is a re-connection.
+        if (this.get('_hasMadeConnection')) {
+          if (this.get('logging')) console.log('debug', 'Reconnected');
+          this.dispatchEvent(new CustomEvent('reconnected', {
+            detail: {
+              disconnectedAt: this.get('disconnectedAt'),
+            },
+            bubbles: true
+          }));
+        } else {
+          if (this.get('logging')) console.log('debug', 'Connected');
+          this.set('_hasMadeConnection', true);
+        }
+      });
+
+      this.socket.on('disconnect',() => {
+        this.set('isConnected', false);
+        this.set('disconnectedAt', new Date());
+      });
+
+      this.socket.on('db-activity', (data) => {
         this.dispatchEvent(new CustomEvent('rx-event', {
-          detail: Object.assign({}, { type: ev, payload: data }),
+          detail: {type: 'db-activity', payload: data},
           bubbles: true
         }));
       });
-    });
-  }
 
-  __tx(cr) {
-    if (!this.socket) {
-      return;
+    } catch (err) {
+      this.set('isConnected', false);
+      if (this.get('logging')) console.log('err', err);
+      this.dispatchEvent(new CustomEvent('error', {detail: err, bubbles: true, composed: true}));
     }
-
-    if (this.get('logging')) console.log('debug', cr);
-
-    cr.indexSplices.forEach(i => {
-      if (i.type !== 'splice' || i.addedCount === 0) {
-        return;
-      }
-      if (this.get('logging')) console.log('debug', 'tx.added');
-
-      for (let x=0; x<i.addedCount; x++) {
-        let o = i.object[x+i.index];
-        if (this.get('logging')) console.log('debug', `emitting: ${o.type}`);
-        this.socket.emit(o.type, o.payload);
-      }
-    });
   }
 }
 window.customElements.define(ButtressDbSocketIo.is, ButtressDbSocketIo);

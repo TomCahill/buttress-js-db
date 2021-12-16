@@ -91,6 +91,14 @@ export default class ButtressDbDataService extends PolymerElement {
     return Promise.resolve();
   }
 
+  resync(date) {
+    return this.search({
+      updatedAt: {
+        $gt: date.toISOString()
+      }
+    })
+  }
+
   /**
    * Used to generate Add and Remove requests
    * @param {Object} cr - data needed to calculate what has changed
@@ -479,7 +487,7 @@ export default class ButtressDbDataService extends PolymerElement {
             url: rq.url,
             entityId: rq.entityId,
             method: rq.method,
-            body,
+            body: rq.body,
           },
           bubbles: true,
           composed: true,

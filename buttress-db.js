@@ -188,7 +188,9 @@ export default class ButtressDb extends PolymerElement {
         db="{{db}}",
         connected="{{io.connected}}",
         synced="{{io.synced}}",
-        logging="[[logging]]"
+        logging="[[logging]]",
+        settings="[[settings]]",
+        on-reconnected="_handleReconnected"
       ></buttress-db-realtime-handler>
     `;
   }
@@ -282,6 +284,7 @@ export default class ButtressDb extends PolymerElement {
             network_read: true,
             bundled_requests: true,
             bundled_requests_chunk: 100,
+            pause_realtime: false,
           };
         }
       },
@@ -558,6 +561,17 @@ export default class ButtressDb extends PolymerElement {
   setOption(key, value) {
     if (!'localStorage' in window) return false;
     window.localStorage.setItem(`buttress_${key}`, value);
+  }
+
+  _handleReconnected(ev) {
+    // Send our a request to each data service
+
+    const stack = this.get('__collections').map((c) => () => this.dataService(c.name).resync(ev.detail.disconnectedAt));
+    this._loadDataService(stack)
+      .then(() => {
+        // Notify realtime that mission is complete
+        console.log('Winner');
+      });
   }
 
   // Worker IO

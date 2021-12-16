@@ -99,13 +99,6 @@
               io="{{io}}",
               logging
             ></buttress-db>
-
-            <button on-click="_doPostAddition">Single Addition</button>
-            <button on-click="_doManyPostAdditions">Many Additions</button>
-            <button on-click="_doPostModification">Single Modification</button>
-            <button on-click="_doManyPostModifications">Many Modification</button>
-
-            <button on-click="_toggleBundling">Bundling: [[dbSettings.bundled_requests]] </button>
             <div class="flex horizontal">
               <div class="flow vertical flex ph-1">
                 <h4>Details</h4>
@@ -123,6 +116,10 @@
                 <button on-click="_doManyPostAdditions">Many Additions</button>
                 <button on-click="_doPostModification">Single Modification</button>
                 <button on-click="_doManyPostModifications">Many Modification</button>
+                <hr/>
+                <button on-click="_toggleBundling">Bundling: [[dbSettings.bundled_requests]]</button>
+                <hr/>
+                <button on-click="_toggleRealtime">Realtime: [[dbSettings.pause_realtime]]</button>
               </div>
             </div>
             <div class="vertical-section-container centered">
@@ -211,6 +208,12 @@
 
         _toggleBundling() {
           this.set('dbSettings.bundled_requests', !this.get('dbSettings.bundled_requests'));
+        }
+        _toggleRequests() {
+          this.set('dbSettings.pause_requests', !this.get('dbSettings.pause_requests'));
+        }
+        _toggleRealtime() {
+          this.set('dbSettings.pause_realtime', !this.get('dbSettings.pause_realtime'));
         }
 
         _saveDetails() {
