@@ -114,7 +114,7 @@
                 <input id="apiPath" placeholder="API Path" value="[[apiPath]]" />
                 <input id="userId" placeholder="User Id" value="[[userId]]" />
                 <input id="token" placeholder="Token" value="[[token]]" />
-                <input type="submit" value="Save" on-click="_doSubmit"/>
+                <input type="submit" value="Save" on-click="_saveDetails"/>
               </div>
 
               <div class="flow vertical flex ph-1">
@@ -144,26 +144,21 @@
         ready() {
           super.ready();
 
-          this._localRead('apiEndpoint');
-          this._localRead('apiAppId');
-          this._localRead('apiPath');
-          this._localRead('userId');
-          this._localRead('token');
+          this._fetchLocal('apiEndpoint');
+          this._fetchLocal('apiAppId');
+          this._fetchLocal('apiPath');
+          this._fetchLocal('userId');
+          this._fetchLocal('token');
         }
 
-        _localRead(key) {
+        _saveLocal(key, value) {
+          this.set(key, value);
+          localStorage.setItem(key, value);
+        }
+        _fetchLocal(key) {
           if (window.localStorage.getItem(key)) {
             this.set(key, window.localStorage.getItem(key));
           }
-        }
-        _localWrite(key, value) {
-          window.localStorage.setItem(key, value);
-          this.set(key, value);
-        }
-
-        _changeToken(ev) {
-          this.set('token', this.$.selectToken.value);
-          localStorage.setItem('token', this.$.selectToken.value);
         }
 
         _doPostAddition(n) {
@@ -223,6 +218,14 @@
 
         _toggleBundling() {
           this.set('dbSettings.bundled_requests', !this.get('dbSettings.bundled_requests'));
+        }
+
+        _saveDetails() {
+          this._saveLocal('apiEndpoint', this.$.apiEndpoint.value);
+          this._saveLocal('apiAppId', this.$.apiAppId.value);
+          this._saveLocal('apiPath', this.$.apiPath.value);
+          this._saveLocal('userId', this.$.userId.value);
+          this._saveLocal('token', this.$.token.value);
         }
 
         stringify(object) {

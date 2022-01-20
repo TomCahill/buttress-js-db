@@ -344,7 +344,7 @@ export default class ButtressDbDataService extends PolymerElement {
     if (this.get('logging')) console.log(`remove rq: ${entityId}`);
 
     return this.__queueRequest({
-      type: 'rm',
+      type: 'delete',
       url: this.scalarBaseUrl(entityId),
       entityId: entityId,
       method: 'DELETE',
@@ -408,16 +408,8 @@ export default class ButtressDbDataService extends PolymerElement {
     const settings = this.get('settings');
     this.status = 'working';
 
-    let request = null;
-
     const requestIdx = this.requestQueue.findIndex((r) => r.type === 'add' || r.type === 'delete');
-    if (requestIdx !== -1) {
-      [request] = this.requestQueue.splice(requestIdx, 1);
-    }
-
-    if (!request) {
-      request = this.requestQueue.shift();
-    }
+    let request = (requestIdx !== -1 && settings.bundled_requests) ? this.requestQueue.splice(requestIdx, 1).shift() : this.requestQueue.shift();
 
     // Attempt to reduce matching request types down to a single request
     if (settings.bundled_requests && ButtressDbDataService.constants.BUNDLED_REQUESTS_TYPES.includes(request.type)) {
