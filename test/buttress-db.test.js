@@ -17,7 +17,6 @@ describe('buttress-db', async () => {
   const element = /** @type {ButtressDb} */ (await fixture(html`
     <buttress-db
       endpoint="https://test.local.buttressjs.com",
-      app-id="Q814lldQYVh5o0UAd1kRpwlkIVcZIw9N",
       api-path="bjs",
       user-id="1",
       token="ddxpIdw1pQEhokFV05A9AoN5QplJMpBhsIkA" 

@@ -183,8 +183,8 @@ export default class ButtressDb extends PolymerElement {
       <buttress-db-realtime-handler
         token="[[token]]",
         endpoint="[[endpoint]]",
-        app-id="[[appId]]",
         user-id="[[userId]]",
+        api-path="[[apiPath]]",
         db="{{db}}",
         connected="{{io.connected}}",
         synced="{{io.synced}}",

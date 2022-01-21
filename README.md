@@ -9,7 +9,6 @@ Sample use:
 ```html
 <buttress-db
   endpoint="endpoint.example.com",
-  app-id="[[publicAppId]]",
   api-path="[[ApiPath]]",
   user-id="[[AuthedUserId]]",
   token="[[AuthedUserToken]]",

@@ -15,7 +15,7 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
 
       <buttress-db-socket-io
         endpoint="[[endpoint]]",
-        app-id="[[appId]]",
+        api-path="[[apiPath]]",
         token="[[token]]",
         connected="{{connected}}",
         on-rx-event="__handleRxEvent"
@@ -29,6 +29,7 @@ export class ButtressDbRealtimeHandler extends PolymerElement {
       token: String,
       appId: String,
       userId: String,
+      apiPath: String,
 
       logging: {
         type: Boolean,

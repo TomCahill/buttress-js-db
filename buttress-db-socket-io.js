@@ -20,6 +20,7 @@ export class ButtressDbSocketIo extends PolymerElement {
       token: String,
       endpoint: String,
       appId: String,
+      apiPath: String,
 
       logging: {
         type: Boolean,
@@ -89,12 +90,14 @@ export class ButtressDbSocketIo extends PolymerElement {
 
   connect() {
     const token = this.get('token');
-    const appPublicId = this.get('appId');
+    const apiPath = this.get('apiPath');
 
     let uri = `${this.endpoint}`;
     if (appPublicId) {
       uri = `${this.endpoint}/${appPublicId}`;
     }
+
+    const uri = (apiPath) ? `${this.endpoint}/${apiPath}` : `${this.endpoint}`;
 
     if (this.get('logging')) console.log('debug', 'Attempting Socket connection', uri);
     try {
