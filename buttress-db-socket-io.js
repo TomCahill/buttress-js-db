@@ -92,11 +92,6 @@ export class ButtressDbSocketIo extends PolymerElement {
     const token = this.get('token');
     const apiPath = this.get('apiPath');
 
-    let uri = `${this.endpoint}`;
-    if (appPublicId) {
-      uri = `${this.endpoint}/${appPublicId}`;
-    }
-
     const uri = (apiPath) ? `${this.endpoint}/${apiPath}` : `${this.endpoint}`;
 
     if (this.get('logging')) console.log('debug', 'Attempting Socket connection', uri);
